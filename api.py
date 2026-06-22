@@ -54,6 +54,16 @@ def init_db():
             conn.execute("ALTER TABLE notes ADD COLUMN category TEXT NOT NULL DEFAULT '未分类'")
         except sqlite3.OperationalError:
             pass
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                note_id INTEGER NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_chat_note ON chat_messages(note_id)")
 
 
 def row_to_dict(row) -> dict:
@@ -191,6 +201,36 @@ def delete_note(note_id: int):
         if not conn.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
             raise HTTPException(status_code=404, detail="笔记不存在")
         conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+        conn.execute("DELETE FROM chat_messages WHERE note_id = ?", (note_id,))
+    return {"ok": True}
+
+
+# ── AI 对话历史（按笔记持久化）────────────────────────────
+
+@app.get("/api/notes/{note_id}/chat")
+def get_chat_history(note_id: int):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT role, content FROM chat_messages WHERE note_id = ? ORDER BY id",
+            (note_id,)
+        ).fetchall()
+    return [{"role": r["role"], "content": r["content"]} for r in rows]
+
+
+@app.post("/api/notes/{note_id}/chat", status_code=201)
+def add_chat_message(note_id: int, msg: ChatMessage):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO chat_messages (note_id, role, content, created_at) VALUES (?, ?, ?, ?)",
+            (note_id, msg.role, msg.content, now())
+        )
+    return {"ok": True}
+
+
+@app.delete("/api/notes/{note_id}/chat")
+def clear_chat_history(note_id: int):
+    with get_db() as conn:
+        conn.execute("DELETE FROM chat_messages WHERE note_id = ?", (note_id,))
     return {"ok": True}
 
 
