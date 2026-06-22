@@ -1,0 +1,15 @@
+# Secrets / config
+.env
+.env.local
+
+# Personal notes database (lives in $HOME, never commit)
+.smart_notes.db
+notes.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
