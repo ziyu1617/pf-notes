@@ -41,8 +41,6 @@ cp .env.example .env
 # 编辑 .env，填入智谱 API Key： ZHIPU_API_KEY=你的key
 ```
 
-> 智谱开放平台：<https://open.bigmodel.cn/>
-
 ### 2. 安装依赖
 
 ```bash
@@ -97,5 +95,4 @@ CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `ass
 
 ## 📝 说明
 
-- `.env` 已被 git 忽略，API Key 不会进仓库
 - 前端 `frontend/out`、`frontend/node_modules` 不入库；首次运行由 `desktop.sh` 自动安装并构建
