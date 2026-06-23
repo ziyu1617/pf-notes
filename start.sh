@@ -1,7 +1,7 @@
 #!/bin/bash
 export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FRONTEND_DIR="$HOME/Downloads/日记本"
+FRONTEND_DIR="$SCRIPT_DIR/frontend"
 
 echo "启动 Smart Notes..."
 echo ""

@@ -1,0 +1,218 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #c0c0c0;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000080;
+  --primary-foreground: #ffffff;
+  --secondary: #d4d0c8;
+  --secondary-foreground: #000000;
+  --muted: #d4d0c8;
+  --muted-foreground: #808080;
+  --accent: #000080;
+  --accent-foreground: #ffffff;
+  --destructive: #c00000;
+  --destructive-foreground: #ffffff;
+  --border: #808080;
+  --input: #ffffff;
+  --ring: #000080;
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0px;
+  --sidebar: #d4d0c8;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #000080;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #000080;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #808080;
+  --sidebar-ring: #000080;
+  
+  /* Windows Classic Colors */
+  --win-titlebar: linear-gradient(90deg, #000080, #1084d0);
+  --win-titlebar-inactive: #808080;
+  --win-button-face: #d4d0c8;
+  --win-button-highlight: #ffffff;
+  --win-button-shadow: #808080;
+  --win-button-dark-shadow: #404040;
+  --win-window-bg: #ece9d8;
+  --win-text-area: #ffffff;
+}
+
+.dark {
+  --background: #c0c0c0;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000080;
+  --primary-foreground: #ffffff;
+  --secondary: #d4d0c8;
+  --secondary-foreground: #000000;
+  --muted: #d4d0c8;
+  --muted-foreground: #808080;
+  --accent: #000080;
+  --accent-foreground: #ffffff;
+  --destructive: #c00000;
+  --destructive-foreground: #ffffff;
+  --border: #808080;
+  --input: #ffffff;
+  --ring: #000080;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: #d4d0c8;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #000080;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #000080;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #808080;
+  --sidebar-ring: #000080;
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Windows Classic Button Style */
+.win-button {
+  background: #d4d0c8;
+  border: none;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 
+    inset -1px -1px 0 #404040,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #d4d0c8;
+}
+
+.win-button:active {
+  box-shadow: 
+    inset 1px 1px 0 #404040,
+    inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #808080,
+    inset -2px -2px 0 #d4d0c8;
+}
+
+.win-button:hover {
+  background: #e4e0d8;
+}
+
+/* Windows Classic Input Style */
+.win-input {
+  background: #ffffff;
+  border: none;
+  box-shadow: 
+    inset 1px 1px 0 #808080,
+    inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #404040,
+    inset -2px -2px 0 #d4d0c8;
+}
+
+/* Windows Classic Window Border */
+.win-border {
+  box-shadow: 
+    inset -1px -1px 0 #404040,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #d4d0c8;
+}
+
+/* Windows Classic Inset Border */
+.win-inset {
+  box-shadow: 
+    inset 1px 1px 0 #808080,
+    inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #404040,
+    inset -2px -2px 0 #d4d0c8;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background: #d4d0c8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d0c8;
+  box-shadow: 
+    inset -1px -1px 0 #404040,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #d4d0c8;
+}
+
+::-webkit-scrollbar-button {
+  background: #d4d0c8;
+  box-shadow: 
+    inset -1px -1px 0 #404040,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #d4d0c8;
+}

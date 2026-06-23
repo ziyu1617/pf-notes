@@ -449,7 +449,8 @@ def clear_strawberry_history():
 
 
 # ── 静态前端 ──────────────────────────────────────────────
-# 若前端已构建（npm run export），则把它挂到根路径
-FRONTEND_DIR = Path.home() / "Downloads" / "日记本" / "out"
+# 若前端已构建（npm run export），则把它挂到根路径。
+# 前端源码就在仓库的 frontend/ 子目录，构建产物在 frontend/out。
+FRONTEND_DIR = Path(__file__).resolve().parent / "frontend" / "out"
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
