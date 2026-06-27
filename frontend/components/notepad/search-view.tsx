@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Note } from '@/hooks/use-notes'
+import { stripImageMarkdown } from '@/lib/images'
 
 interface SearchViewProps {
   onSearch: (query: string) => Note[]
@@ -92,8 +93,8 @@ export function SearchView({ onSearch, onSelectNote, onViewNote }: SearchViewPro
                   [{note.category}] | {formatDate(note.createdAt)}
                 </div>
                 <div className="text-[11px] mt-1 text-[#404040] line-clamp-2">
-                  {highlightText(note.content.substring(0, 150), query)}
-                  {note.content.length > 150 && '...'}
+                  {highlightText(stripImageMarkdown(note.content).substring(0, 150), query)}
+                  {stripImageMarkdown(note.content).length > 150 && '...'}
                 </div>
               </div>
             ))}

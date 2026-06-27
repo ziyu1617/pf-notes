@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { imageFilesFrom, uploadImageAsMarkdown } from '@/lib/images'
 
 interface NoteEditorProps {
   initialTitle?: string
@@ -26,6 +27,61 @@ export function NoteEditor({
   const [category, setCategory] = useState(initialCategory)
   const [newCategory, setNewCategory] = useState('')
   const [showNewCategory, setShowNewCategory] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 在光标处插入文本，并把光标移到插入内容之后
+  const insertAtCursor = (text: string) => {
+    const el = textareaRef.current
+    if (!el) {
+      setContent(prev => prev + text)
+      return
+    }
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    setContent(prev => {
+      const next = prev.slice(0, start) + text + prev.slice(end)
+      // 等 React 更新后恢复光标位置
+      requestAnimationFrame(() => {
+        const pos = start + text.length
+        el.selectionStart = el.selectionEnd = pos
+        el.focus()
+      })
+      return next
+    })
+  }
+
+  const uploadAndInsert = async (files: File[]) => {
+    if (files.length === 0) return
+    setUploading(true)
+    try {
+      for (const file of files) {
+        const md = await uploadImageAsMarkdown(file)
+        insertAtCursor(`\n${md}\n`)
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '图片上传失败')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = imageFilesFrom(e.clipboardData)
+    if (images.length > 0) {
+      e.preventDefault()
+      void uploadAndInsert(images)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    const images = imageFilesFrom(e.dataTransfer)
+    if (images.length > 0) {
+      e.preventDefault()
+      void uploadAndInsert(images)
+    }
+  }
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) {
@@ -102,12 +158,38 @@ export function NoteEditor({
         
         {/* 内容编辑 */}
         <div className="flex-1 flex flex-col gap-1 min-h-0">
-          <label className="text-[11px]">内容：</label>
+          <div className="flex items-center gap-2">
+            <label className="text-[11px]">内容：</label>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="win-button text-[11px] px-2"
+            >
+              📷 插入图片
+            </button>
+            <span className="text-[10px] text-[#606060]">
+              {uploading ? '图片上传中…' : '可直接粘贴或拖入图片'}
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void uploadAndInsert(Array.from(e.target.files ?? []))
+                e.target.value = ''
+              }}
+            />
+          </div>
           <textarea
+            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            onPaste={handlePaste}
+            onDrop={handleDrop}
             className="flex-1 p-2 text-[12px] win-input resize-none font-mono leading-relaxed min-h-[300px]"
-            placeholder="输入笔记内容..."
+            placeholder="输入笔记内容...（图片可直接 Ctrl/⌘+V 粘贴或拖入）"
           />
         </div>
         

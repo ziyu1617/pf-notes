@@ -2,13 +2,14 @@
 """Smart Notes API - FastAPI 后端，供前端调用"""
 
 import os
+import uuid
 import sqlite3
 import datetime
 import logging
 from pathlib import Path
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -29,6 +30,21 @@ app.add_middleware(
 )
 
 DB_PATH = Path.home() / ".smart_notes.db"
+# 笔记内粘贴/插入的图片以文件形式保存在此，笔记正文里只存对它们的引用，
+# 避免 base64 撑大数据库、也避免把图片塞进发往模型的上下文。
+UPLOADS_DIR = Path.home() / ".smart_notes_uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
+# 允许的图片类型及其文件扩展名
+IMAGE_EXTENSIONS = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+    "image/bmp": ".bmp",
+    "image/svg+xml": ".svg",
+}
+# 单张图片大小上限（10 MB）
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 ZHIPU_BASE_URL = "https://open.bigmodel.cn/api/paas/v4/"
 MODEL = "GLM-5.1"
 
@@ -334,6 +350,26 @@ def delete_note(note_id: int):
     return {"ok": True}
 
 
+# ── 图片上传 ──────────────────────────────────────────────
+
+@app.post("/api/upload", status_code=201)
+async def upload_image(file: UploadFile = File(...)):
+    """接收笔记中粘贴/选择的图片，存为文件并返回可直接引用的 URL。"""
+    ext = IMAGE_EXTENSIONS.get((file.content_type or "").lower())
+    if ext is None:
+        raise HTTPException(status_code=400, detail="仅支持图片文件")
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="文件为空")
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="图片过大（上限 10 MB）")
+
+    name = f"{uuid.uuid4().hex}{ext}"
+    (UPLOADS_DIR / name).write_bytes(data)
+    return {"url": f"/uploads/{name}"}
+
+
 # ── AI 对话历史（按笔记持久化）────────────────────────────
 
 @app.get("/api/notes/{note_id}/chat")
@@ -448,7 +484,10 @@ def clear_strawberry_history():
     return {"ok": True}
 
 
-# ── 静态前端 ──────────────────────────────────────────────
+# ── 静态资源 ──────────────────────────────────────────────
+# 上传的图片对外服务（须在根路径挂载之前注册，否则会被根路径吞掉）。
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
 # 若前端已构建（npm run export），则把它挂到根路径。
 # 前端源码就在仓库的 frontend/ 子目录，构建产物在 frontend/out。
 FRONTEND_DIR = Path(__file__).resolve().parent / "frontend" / "out"

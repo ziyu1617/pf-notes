@@ -1,6 +1,7 @@
 "use client"
 
 import { Note } from '@/hooks/use-notes'
+import { stripImageMarkdown } from '@/lib/images'
 
 interface DeleteViewProps {
   note: Note | null
@@ -38,8 +39,8 @@ export function DeleteView({ note, onDelete, onCancel }: DeleteViewProps) {
             分类: {note.category}
           </div>
           <div className="text-[11px] mt-2 text-[#404040] max-h-20 overflow-auto">
-            {note.content.substring(0, 200)}
-            {note.content.length > 200 && '...'}
+            {stripImageMarkdown(note.content).substring(0, 200)}
+            {stripImageMarkdown(note.content).length > 200 && '...'}
           </div>
         </div>
         <div className="text-[11px] text-[#c00000] mb-4">

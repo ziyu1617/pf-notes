@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Note } from '@/hooks/use-notes'
 import { AIChatView } from './ai-chat-view'
+import { NoteContent } from './note-content'
 
 interface NoteViewerProps {
   note: Note
@@ -65,9 +66,7 @@ export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) 
 
           {/* 笔记内容 */}
           <div className="flex-1 bg-white p-3 win-inset overflow-auto min-h-[200px]">
-            <pre className="text-[12px] font-mono whitespace-pre-wrap leading-relaxed">
-              {note.content}
-            </pre>
+            <NoteContent content={note.content} />
           </div>
         </div>
 

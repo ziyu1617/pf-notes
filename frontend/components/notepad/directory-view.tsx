@@ -1,6 +1,7 @@
 "use client"
 
 import { Note } from '@/hooks/use-notes'
+import { stripImageMarkdown } from '@/lib/images'
 
 interface DirectoryViewProps {
   notesByDate: Record<string, Note[]>
@@ -64,7 +65,7 @@ export function DirectoryView({
                   >
                     <div className="font-bold">📄 {note.title}</div>
                     <div className="text-[10px] opacity-70 truncate mt-0.5">
-                      [{note.category}] {note.content.substring(0, 50)}...
+                      [{note.category}] {stripImageMarkdown(note.content).substring(0, 50)}...
                     </div>
                   </button>
                 ))}
