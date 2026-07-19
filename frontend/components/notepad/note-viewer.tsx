@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Note } from '@/hooks/use-notes'
 import { AIChatView } from './ai-chat-view'
 import { NoteContent } from './note-content'
+import { ContextMenu, ContextMenuItem } from './context-menu'
+import { writeClipboardText } from '@/lib/clipboard'
 
 interface NoteViewerProps {
   note: Note
@@ -14,6 +16,40 @@ interface NoteViewerProps {
 
 export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) {
   const [aiOpen, setAiOpen] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // 选中正文区域（含图片）的全部内容
+  const selectAll = () => {
+    const el = contentRef.current
+    if (!el) return
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }
+
+  // 复制：有选区就复制选中文本，否则复制整篇正文
+  const copy = async () => {
+    const selected = window.getSelection()?.toString() ?? ''
+    await writeClipboardText(selected || contentRef.current?.innerText || '')
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+      e.preventDefault()
+      selectAll()
+    }
+  }
+
+  const hasSelection = () => (window.getSelection()?.toString().length ?? 0) > 0
+  const menuItems: ContextMenuItem[] = [
+    { label: '复制', shortcut: 'Ctrl+C', disabled: !hasSelection(), onClick: () => void copy() },
+    { label: '复制全文', onClick: () => void writeClipboardText(contentRef.current?.innerText || '') },
+    'separator',
+    { label: '全选', shortcut: 'Ctrl+A', onClick: selectAll },
+  ]
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('zh-CN', {
@@ -65,7 +101,16 @@ export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) 
           </div>
 
           {/* 笔记内容 */}
-          <div className="flex-1 bg-white p-3 win-inset overflow-auto min-h-[200px]">
+          <div
+            ref={contentRef}
+            tabIndex={0}
+            onKeyDown={onKeyDown}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              setMenu({ x: e.clientX, y: e.clientY })
+            }}
+            className="flex-1 bg-white p-3 win-inset overflow-auto min-h-[200px] outline-none select-text"
+          >
             <NoteContent content={note.content} />
           </div>
         </div>
@@ -77,6 +122,10 @@ export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) 
           </div>
         )}
       </div>
+
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
+      )}
     </div>
   )
 }

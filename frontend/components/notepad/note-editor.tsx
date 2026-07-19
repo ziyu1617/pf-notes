@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { imageFilesFrom, uploadImageAsMarkdown } from '@/lib/images'
+import { readClipboard, writeClipboardText } from '@/lib/clipboard'
+import { ContextMenu, ContextMenuItem } from './context-menu'
 
 interface NoteEditorProps {
   initialTitle?: string
@@ -28,28 +30,36 @@ export function NoteEditor({
   const [newCategory, setNewCategory] = useState('')
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // 右键时先捕获选区，之后焦点移到菜单也不会丢失
+  const selRef = useRef({ start: 0, end: 0 })
 
-  // 在光标处插入文本，并把光标移到插入内容之后
+  // 用文本替换 [start, end) 区间，并把光标移到插入内容之后
+  const replaceRange = (start: number, end: number, text: string) => {
+    const el = textareaRef.current
+    setContent(prev => {
+      const next = prev.slice(0, start) + text + prev.slice(end)
+      requestAnimationFrame(() => {
+        if (el) {
+          const pos = start + text.length
+          el.selectionStart = el.selectionEnd = pos
+          el.focus()
+        }
+      })
+      return next
+    })
+  }
+
+  // 在当前光标处插入文本
   const insertAtCursor = (text: string) => {
     const el = textareaRef.current
     if (!el) {
       setContent(prev => prev + text)
       return
     }
-    const start = el.selectionStart
-    const end = el.selectionEnd
-    setContent(prev => {
-      const next = prev.slice(0, start) + text + prev.slice(end)
-      // 等 React 更新后恢复光标位置
-      requestAnimationFrame(() => {
-        const pos = start + text.length
-        el.selectionStart = el.selectionEnd = pos
-        el.focus()
-      })
-      return next
-    })
+    replaceRange(el.selectionStart, el.selectionEnd, text)
   }
 
   const uploadAndInsert = async (files: File[]) => {
@@ -82,6 +92,64 @@ export function NoteEditor({
       void uploadAndInsert(images)
     }
   }
+
+  // ── 右键菜单：选中 / 剪切 / 复制 / 粘贴 / 全选 ──────────────
+  const openMenu = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    e.preventDefault()
+    const el = textareaRef.current
+    if (el) selRef.current = { start: el.selectionStart, end: el.selectionEnd }
+    setMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  const copySelection = async () => {
+    const { start, end } = selRef.current
+    if (end > start) await writeClipboardText(content.slice(start, end))
+  }
+
+  const cutSelection = async () => {
+    const { start, end } = selRef.current
+    if (end <= start) return
+    await writeClipboardText(content.slice(start, end))
+    replaceRange(start, end, '')
+  }
+
+  const pasteFromClipboard = async () => {
+    const { start, end } = selRef.current
+    const { text, images } = await readClipboard()
+    if (images.length > 0) {
+      setUploading(true)
+      try {
+        const mds: string[] = []
+        for (const file of images) mds.push(await uploadImageAsMarkdown(file))
+        replaceRange(start, end, `\n${mds.join('\n')}\n`)
+      } catch (err) {
+        alert(err instanceof Error ? err.message : '图片粘贴失败')
+      } finally {
+        setUploading(false)
+      }
+    } else if (text) {
+      replaceRange(start, end, text)
+    } else {
+      alert('剪贴板为空，或浏览器未授予读取权限')
+    }
+  }
+
+  const selectAll = () => {
+    const el = textareaRef.current
+    if (el) {
+      el.focus()
+      el.select()
+    }
+  }
+
+  const hasSelection = selRef.current.end > selRef.current.start
+  const menuItems: ContextMenuItem[] = [
+    { label: '剪切', shortcut: 'Ctrl+X', disabled: !hasSelection, onClick: () => void cutSelection() },
+    { label: '复制', shortcut: 'Ctrl+C', disabled: !hasSelection, onClick: () => void copySelection() },
+    { label: '粘贴', shortcut: 'Ctrl+V', onClick: () => void pasteFromClipboard() },
+    'separator',
+    { label: '全选', shortcut: 'Ctrl+A', disabled: content.length === 0, onClick: selectAll },
+  ]
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) {
@@ -188,8 +256,9 @@ export function NoteEditor({
             onChange={(e) => setContent(e.target.value)}
             onPaste={handlePaste}
             onDrop={handleDrop}
+            onContextMenu={openMenu}
             className="flex-1 p-2 text-[12px] win-input resize-none font-mono leading-relaxed min-h-[300px]"
-            placeholder="输入笔记内容...（图片可直接 Ctrl/⌘+V 粘贴或拖入）"
+            placeholder="输入笔记内容...（右键可选中/复制/粘贴；图片可直接粘贴或拖入）"
           />
         </div>
         
@@ -203,6 +272,10 @@ export function NoteEditor({
           </button>
         </div>
       </div>
+
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
+      )}
     </div>
   )
 }
