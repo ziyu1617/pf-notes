@@ -1,4 +1,4 @@
-# Smart Notes · 智能记事本
+# pf Notes · 智能记事本
 
 一个**本地优先**的智能记事本：Python 后端 + Next.js 前端，内置基于LLM的**流式 AI 助手**。既能作为**原生桌面应用**（PyWebView 窗口）运行，也提供**命令行 CLI**。复古 Windows 98 风格界面，所有笔记保存在本地 SQLite，不上传云端。
 
