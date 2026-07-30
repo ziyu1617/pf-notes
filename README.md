@@ -16,7 +16,7 @@
 - **后端**：FastAPI + Uvicorn，SQLite，OpenAI SDK
 - **前端**：Next.js（静态导出）+ Tailwind，由后端在同源 `8000` 端口托管
 - **桌面**：PyWebView 原生窗口
-- **AI**：智谱 `GLM-5.1`，流式输出（`base_url = https://open.bigmodel.cn/api/paas/v4/`）
+- **AI**：智谱 `GLM-5.1`，流式输出
 
 ## 📁 目录结构
 
