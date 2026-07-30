@@ -1,19 +1,19 @@
 # Smart Notes · 智能记事本
 
-一个**本地优先**的智能记事本：Python 后端 + Next.js 前端，内置基于智谱 GLM 的**流式 AI 助手**。既能作为**原生桌面应用**（PyWebView 窗口）运行，也提供**命令行 CLI**。复古 Windows 98 风格界面，所有笔记保存在本地 SQLite，不上传云端。
+一个**本地优先**的智能记事本：Python 后端 + Next.js 前端，内置基于LLM的**流式 AI 助手**。既能作为**原生桌面应用**（PyWebView 窗口）运行，也提供**命令行 CLI**。复古 Windows 98 风格界面，所有笔记保存在本地 SQLite，不上传云端。
 
 ## ✨ 功能
 
 - 📝 笔记的增删改查，按分类 / 日期浏览，全文搜索
 - 💬 **AI 建议**：在笔记页右侧开启对话分栏（笔记 7 : AI 3），基于当前笔记内容流式问答，对话按笔记持久化
-- 🍓 **草莓猫猫**：一个温柔的「赛博猫猫」情绪陪聊助手（独立人设），流式输出、对话自动保存
+- 🍓 **草莓**：一个帮你结合日记反思的AI助手，流式输出、对话自动保存
 - 🖥️ 原生桌面窗口（无需浏览器），也可用浏览器访问
 - ⌨️ 命令行 CLI：`notes new / list / view / chat / ...`
 - 🔒 数据全部本地：SQLite 存于 `~/.smart_notes.db`
 
 ## 🧱 技术栈
 
-- **后端**：FastAPI + Uvicorn，SQLite，OpenAI SDK（指向智谱 GLM）
+- **后端**：FastAPI + Uvicorn，SQLite，OpenAI SDK
 - **前端**：Next.js（静态导出）+ Tailwind，由后端在同源 `8000` 端口托管
 - **桌面**：PyWebView 原生窗口
 - **AI**：智谱 `GLM-5.1`，流式输出（`base_url = https://open.bigmodel.cn/api/paas/v4/`）
@@ -84,7 +84,7 @@ CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `ass
 | 笔记对话历史 | `GET/POST/DELETE /api/notes/{id}/chat` |
 | AI 建议（流式，`text/plain`） | `POST /api/ai/chat` |
 | AI 总结 / 助写（流式，后端仍提供） | `POST /api/ai/summarize`、`POST /api/ai/write` |
-| 草莓猫猫（流式） | `POST /api/ai/strawberry` |
+| 草莓（流式） | `POST /api/ai/strawberry` |
 | 草莓对话历史 | `GET/POST/DELETE /api/strawberry/chat` |
 
 ## 💾 数据与配置
