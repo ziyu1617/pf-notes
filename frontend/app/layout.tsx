@@ -1,14 +1,11 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: '记事本 - 本地笔记应用',
-  description: '一个 Windows 风格的本地笔记应用，支持离线使用、分类管理、时间线浏览和 AI 辅助功能',
+  title: '记事本 · 你的日常空间',
+  description: '一个安静的本地笔记空间，让想法、日记与日常计划自然流动。',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -35,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="zh-CN" className="bg-[#008080]">
+    <html lang="zh-CN">
       <body className="font-sans antialiased min-h-screen">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

@@ -2,6 +2,8 @@
 
 import { Note } from '@/hooks/use-notes'
 import { stripImageMarkdown } from '@/lib/images'
+import { useEffect, useRef } from 'react'
+import { FileText, Trash2 } from 'lucide-react'
 
 interface DeleteViewProps {
   note: Note | null
@@ -10,14 +12,25 @@ interface DeleteViewProps {
 }
 
 export function DeleteView({ note, onDelete, onCancel }: DeleteViewProps) {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    cancelRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onCancel])
+
   if (!note) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#ece9d8]">
-        <div className="text-center p-4 bg-[#d4d0c8] win-border">
-          <div className="text-[12px] mb-4">请先从"所有笔记"中选择要删除的笔记</div>
-          <button onClick={onCancel} className="win-button text-[11px] px-4 py-1">
-            确定
-          </button>
+      <div className="glass-delete-view">
+        <div className="glass-dialog glass-delete-card">
+          <div className="glass-dialog-icon" aria-hidden="true"><FileText size={25} strokeWidth={1.5} /></div>
+          <h2>还没有选择笔记</h2>
+          <p>先到“所有笔记”选择你想删除的内容。</p>
+          <div className="glass-dialog-actions"><button ref={cancelRef} onClick={onCancel} className="glass-button-primary">返回笔记</button></div>
         </div>
       </div>
     )
@@ -30,33 +43,22 @@ export function DeleteView({ note, onDelete, onCancel }: DeleteViewProps) {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-[#ece9d8]">
-      <div className="p-4 bg-[#d4d0c8] win-border max-w-md w-full">
-        <div className="text-[12px] font-bold mb-3">确认删除以下笔记：</div>
-        <div className="bg-white p-3 win-inset mb-4">
-          <div className="text-[12px] font-bold">{note.title}</div>
-          <div className="text-[10px] text-[#404040] mt-1">
-            分类: {note.category}
-          </div>
-          <div className="text-[11px] mt-2 text-[#404040] max-h-20 overflow-auto">
+    <div className="glass-delete-view">
+      <div className="glass-dialog glass-delete-card">
+        <div className="glass-dialog-icon glass-dialog-icon-danger" aria-hidden="true"><Trash2 size={25} strokeWidth={1.5} /></div>
+        <h2>删除这条笔记？</h2>
+        <p>删除后无法恢复，请确认是否继续。</p>
+        <div className="glass-delete-preview">
+          <h3>{note.title || '无标题笔记'}</h3>
+          <span className="glass-chip">{note.category}</span>
+          <div className="glass-delete-excerpt">
             {stripImageMarkdown(note.content).substring(0, 200)}
             {stripImageMarkdown(note.content).length > 200 && '...'}
           </div>
         </div>
-        <div className="text-[11px] text-[#c00000] mb-4">
-          删除后将无法恢复！
-        </div>
-        <div className="flex justify-end gap-2">
-          <button onClick={onCancel} className="win-button text-[11px] px-4 py-1">
-            取消
-          </button>
-          <button 
-            onClick={handleDelete} 
-            className="win-button text-[11px] px-4 py-1"
-            style={{ color: '#c00000' }}
-          >
-            确认删除
-          </button>
+        <div className="glass-dialog-actions">
+          <button ref={cancelRef} onClick={onCancel} className="glass-button">保留笔记</button>
+          <button onClick={handleDelete} className="glass-button glass-button-danger">确认删除</button>
         </div>
       </div>
     </div>

@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from 'react'
+import { ArrowUpRight, BookOpen, CalendarDays, FileText, Layers3 } from 'lucide-react'
 import { Note } from '@/hooks/use-notes'
 import { stripImageMarkdown } from '@/lib/images'
 
@@ -10,74 +12,58 @@ interface DirectoryViewProps {
   onSelectNote: (note: Note) => void
 }
 
-export function DirectoryView({ 
-  notesByDate, 
-  notesByCategory, 
-  categories, 
-  onSelectNote 
-}: DirectoryViewProps) {
+export function DirectoryView({ notesByDate, notesByCategory, categories, onSelectNote }: DirectoryViewProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const activeCategory = selectedCategory && categories.includes(selectedCategory) ? selectedCategory : null
+  const totalNotes = Object.values(notesByDate).reduce((total, notes) => total + notes.length, 0)
+  const groups = Object.entries(notesByDate)
+    .map(([date, notes]) => [date, activeCategory ? notes.filter(note => note.category === activeCategory) : notes] as const)
+    .filter(([, notes]) => notes.length > 0)
+  const visibleCount = groups.reduce((total, [, notes]) => total + notes.length, 0)
+
   return (
-    <div className="flex-1 flex overflow-hidden">
-      {/* 左侧分类列表 */}
-      <div className="w-36 shrink-0 border-r border-[#808080] bg-white win-inset overflow-auto sm:w-48">
-        <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
-          📁 分类目录
-        </div>
-        <div className="p-1">
+    <div className="notes-directory">
+      <div className="notes-directory-filters" aria-label="笔记分类">
+        <span className="notes-filter-label"><Layers3 size={15} strokeWidth={1.7} /> 分类</span>
+        <div className="notes-category-list">
+          <button className={`notes-category-chip ${activeCategory === null ? 'is-active' : ''}`} aria-pressed={activeCategory === null} onClick={() => setSelectedCategory(null)}>
+            全部笔记 <span>{totalNotes}</span>
+          </button>
           {categories.map(category => (
-            <div key={category} className="mb-2">
-              <div className="text-[11px] font-bold px-2 py-1 bg-[#d4d0c8]">
-                📂 {category}
-              </div>
-              <div className="pl-2">
-                {notesByCategory(category).map(note => (
-                  <button
-                    key={note.id}
-                    onClick={() => onSelectNote(note)}
-                    className="w-full text-left text-[11px] px-2 py-0.5 hover:bg-[#000080] hover:text-white truncate"
-                  >
-                    📄 {note.title}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <button key={category} className={`notes-category-chip ${activeCategory === category ? 'is-active' : ''}`} aria-pressed={activeCategory === category} onClick={() => setSelectedCategory(category)}>
+              <span className="notes-category-name">{category}</span><span>{notesByCategory(category).length}</span>
+            </button>
           ))}
         </div>
       </div>
-      
-      {/* 右侧时间线 */}
-      <div className="min-w-0 flex-1 bg-white win-inset overflow-auto">
-        <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
-          📅 按时间查看
-        </div>
-        <div className="p-2">
-          {Object.keys(notesByDate).length === 0 && (
-            <div className="p-4 text-center text-[11px] text-[#808080]">
-              暂无笔记，请点击 [3] 新建笔记 创建
-            </div>
-          )}
-          {Object.entries(notesByDate).map(([date, notes]) => (
-            <div key={date} className="mb-3">
-              <div className="text-[11px] font-bold px-2 py-1 bg-[#ece9d8] border border-[#808080] mb-1">
-                📅 {date}
-              </div>
-              <div className="pl-2 space-y-1">
-                {notes.map(note => (
-                  <button
-                    key={note.id}
-                    onClick={() => onSelectNote(note)}
-                    className="w-full text-left text-[11px] p-2 border border-[#d4d0c8] hover:bg-[#000080] hover:text-white hover:border-[#000080]"
-                  >
-                    <div className="font-bold">📄 {note.title}</div>
-                    <div className="text-[10px] opacity-70 truncate mt-0.5">
-                      [{note.category}] {stripImageMarkdown(note.content).substring(0, 50)}...
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+
+      <div className="notes-directory-scroll">
+        {groups.length === 0 ? (
+          <div className="notes-empty glass-card">
+            <div className="notes-empty-icon"><BookOpen size={30} strokeWidth={1.3} /></div>
+            <h2>把日常，留在这里</h2>
+            <p>点击「新建笔记」，记下一个想法或今天的片刻。</p>
+          </div>
+        ) : (
+          <>
+            <div className="notes-directory-summary"><span>按时间浏览</span><span>{visibleCount} 篇笔记</span></div>
+            {groups.map(([date, notes]) => (
+              <section key={date} className="notes-date-group" aria-label={date}>
+                <div className="notes-date-heading"><CalendarDays size={14} strokeWidth={1.7} /><h2>{date}</h2><span>{notes.length} 篇</span><div /></div>
+                <div className="notes-card-grid">
+                  {notes.map(note => (
+                    <button key={note.id} onClick={() => onSelectNote(note)} className="notes-preview-card glass-card">
+                      <div className="notes-preview-top"><span className="notes-file-icon"><FileText size={18} strokeWidth={1.5} /></span><span className="notes-note-category">{note.category}</span><ArrowUpRight className="notes-open-arrow" size={17} strokeWidth={1.6} /></div>
+                      <h3>{note.title}</h3>
+                      <p>{stripImageMarkdown(note.content).trim() || '这篇笔记记录了图片，打开看看。'}</p>
+                      <div className="notes-preview-footer"><span>{note.createdAt.slice(11, 16)}</span><span>阅读笔记 <ArrowUpRight size={12} strokeWidth={1.7} /></span></div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </>
+        )}
       </div>
     </div>
   )

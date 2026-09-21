@@ -1,35 +1,31 @@
 "use client"
 
+import { CalendarDays, BookOpen, PenLine, Heart } from 'lucide-react'
+
 interface MenuBarProps {
   onAction: (action: string) => void
   currentView?: string
 }
 
 const menuItems = [
-  { key: '1', label: '日历', action: 'calendar', icon: '📅' },
-  { key: '2', label: '所有笔记', action: 'list', icon: '📋' },
-  { key: '3', label: '新建笔记', action: 'new', icon: '✏️' },
-  { key: '4', label: '草莓', action: 'strawberry', icon: '🍓' },
+  { key: '1', label: '日历', action: 'calendar', icon: CalendarDays },
+  { key: '2', label: '所有笔记', action: 'list', icon: BookOpen },
+  { key: '3', label: '新建笔记', action: 'new', icon: PenLine },
+  { key: '4', label: '草莓', action: 'strawberry', icon: Heart },
 ]
 
 export function MenuBar({ onAction, currentView }: MenuBarProps) {
   return (
-    <div className="flex flex-wrap gap-1 p-1 bg-[#d4d0c8] border-b border-[#808080]">
-      {menuItems.map((item) => (
-        <button
-          key={item.key}
-          onClick={() => onAction(item.action)}
+    <nav className="app-nav" aria-label="主要功能">
+      {menuItems.map(({ icon: Icon, ...item }) => (
+        <button key={item.key} onClick={() => onAction(item.action)}
           aria-current={currentView === item.action ? 'page' : undefined}
-          style={currentView === item.action ? { backgroundColor: '#000080', color: '#ffffff' } : undefined}
-          className={`win-button text-[11px] px-2 py-0.5 whitespace-nowrap ${
-            currentView === item.action ? 'bg-[#000080] text-white' : ''
-          }`}
-        >
-          <span className="mr-1 text-[10px] opacity-60">[{item.key}]</span>
-          {item.icon && <span className="mr-1">{item.icon}</span>}
-          {item.label}
+          title={`${item.label} · 快捷键 ${item.key}`}
+          data-tone={item.action === 'strawberry' ? 'rose' : undefined}
+          className="app-nav-item">
+          <Icon aria-hidden="true" /><span>{item.label}</span>
         </button>
       ))}
-    </div>
+    </nav>
   )
 }

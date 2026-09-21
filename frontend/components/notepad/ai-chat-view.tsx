@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Note } from '@/hooks/use-notes'
 import { streamPost } from '@/lib/stream'
+import { ArrowUp, FileText, Sparkles, Trash2, X } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -22,11 +23,15 @@ export function AIChatView({ note, onClose, onSelectNote, embedded = false }: AI
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const sendStartedRef = useRef(false)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'end',
+    })
   }, [messages])
 
   // 切换笔记时加载该笔记已保存的对话记录（无笔记则清空）
@@ -131,110 +136,99 @@ export function AIChatView({ note, onClose, onSelectNote, embedded = false }: AI
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleSend()
     }
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 flex gap-2 p-2 bg-[#ece9d8] overflow-hidden">
-        {/* 笔记预览（嵌入分栏时隐藏，笔记已在左侧显示） */}
-        {!embedded && (
-          <div className="w-64 flex flex-col shrink-0">
-            <div className="text-[11px] font-bold mb-1">当前笔记</div>
-            <div className="flex-1 bg-white p-2 win-inset overflow-auto">
-              {note ? (
-                <>
-                  <div className="text-[11px] font-bold mb-1">{note.title}</div>
-                  <div className="text-[10px] text-[#808080] mb-2">[{note.category}]</div>
-                  <pre className="text-[10px] font-mono whitespace-pre-wrap">
-                    {note.content}
-                  </pre>
-                </>
-              ) : (
-                <div className="text-[11px] text-[#808080]">
-                  <p className="mb-2">未选择笔记</p>
-                  {onSelectNote && (
-                    <button
-                      onClick={onSelectNote}
-                      className="win-button text-[10px] px-2"
-                    >
-                      去选择笔记
-                    </button>
-                  )}
-                </div>
-              )}
+    <div className={`glass-chat-layout ${embedded ? 'chat-embedded' : ''}`}>
+      {!embedded && (
+        <aside className="chat-note-preview glass-card" aria-label="当前笔记">
+          <span className="chat-note-eyebrow"><FileText size={14} /> 当前笔记</span>
+          {note ? (
+            <>
+              <h3>{note.title || '无标题笔记'}</h3>
+              <span className="glass-chip">{note.category}</span>
+              <pre>{note.content}</pre>
+            </>
+          ) : (
+            <div className="chat-note-empty">
+              <p>选择一条笔记，让讨论更有灵感。</p>
+              {onSelectNote && <button onClick={onSelectNote} className="glass-button">选择笔记</button>}
+            </div>
+          )}
+        </aside>
+      )}
+
+      <section className="glass-chat ai-chat" aria-label="AI 笔记助手">
+        <header className="chat-header">
+          <div className="chat-heading">
+            <div className="chat-avatar" aria-hidden="true"><Sparkles size={20} strokeWidth={1.6} /></div>
+            <div>
+              <h2>一起想得更远</h2>
+              <p>{note ? '围绕这条笔记，继续你的思考' : '你的 AI 笔记助手'}</p>
             </div>
           </div>
-        )}
-
-        {/* 对话区域 */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold">对话{note && '（已保存到此笔记）'}</span>
+          <div className="chat-header-actions">
             {note && messages.length > 0 && (
-              <button
-                onClick={handleClear}
-                disabled={isLoading}
-                className="win-button text-[10px] px-2"
-              >
-                清空对话
+              <button onClick={handleClear} disabled={isLoading} className="glass-icon-button chat-clear" aria-label="清空笔记对话" title="清空对话">
+                <Trash2 size={16} strokeWidth={1.7} />
               </button>
             )}
+            {!embedded && <button onClick={onClose} className="glass-icon-button" aria-label="关闭 AI 对话" title="关闭对话"><X size={17} /></button>}
           </div>
-          <div className="flex-1 bg-white win-inset overflow-auto p-2">
-            {messages.length === 0 && (
-              <div className="text-[11px] text-[#808080] p-2">
-                开始与 AI 对话吧！{note ? '您可以问关于当前笔记的任何问题。' : '建议先选择一条笔记再开始对话。'}
+        </header>
+
+        <div className="chat-messages" role="log" aria-label="AI 对话记录" aria-live="polite">
+          {messages.length === 0 && (
+            <div className="chat-welcome ai-welcome">
+              <div className="chat-welcome-orb" aria-hidden="true"><Sparkles size={29} strokeWidth={1.25} /></div>
+              <span className="chat-eyebrow">A FRESH PERSPECTIVE</span>
+              <h3>给想法一点新灵感。</h3>
+              <p>{note ? '梳理思路、提炼重点，或展开一个新方向。' : '选择一条笔记，或者直接从一个问题开始。'}</p>
+              <div className="chat-suggestions">
+                {(note ? ['帮我梳理这条笔记', '有哪些值得深入的想法？'] : ['帮我整理思路', '给我一点写作灵感']).map(prompt => (
+                  <button key={prompt} onClick={() => { setInput(prompt); inputRef.current?.focus() }} className="chat-suggestion">{prompt}</button>
+                ))}
               </div>
-            )}
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`mb-2 p-2 text-[11px] ${
-                  msg.role === 'user' 
-                    ? 'bg-[#ece9d8] ml-8' 
-                    : 'bg-[#e0f0ff] mr-8'
-                }`}
-              >
-                <div className="text-[10px] font-bold mb-1">
-                  {msg.role === 'user' ? '您' : 'AI'}
-                </div>
-                <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
-              </div>
-            ))}
-            {isLoading && messages[messages.length - 1]?.role === 'user' && (
-              <div className="mb-2 p-2 text-[11px] bg-[#e0f0ff] mr-8">
-                <div className="text-[10px] font-bold mb-1">AI</div>
-                <span className="text-[#000080]">正在思考...</span>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-          
-          {/* 输入区域 */}
-          <div className="flex gap-2 mt-2">
-            <input
-              type="text"
+            </div>
+          )}
+          {messages.map((msg, i) => (
+            <article key={i} className={`chat-message ${msg.role === 'user' ? 'chat-message-user' : 'chat-message-assistant'}`}>
+              <span className="chat-message-author">{msg.role === 'user' ? '你' : 'AI 助手'}</span>
+              <div className="chat-bubble"><p>{msg.content}</p></div>
+            </article>
+          ))}
+          {isLoading && messages[messages.length - 1]?.role === 'user' && (
+            <div className="chat-message chat-message-assistant">
+              <span className="chat-message-author">AI 助手</span>
+              <div className="chat-bubble chat-thinking"><span className="chat-typing" aria-hidden="true"><i /><i /><i /></span>正在思考…</div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="chat-compose-area">
+          <div className="chat-composer">
+            <textarea
+              ref={inputRef}
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 p-1 text-[12px] win-input"
-              placeholder="输入您的问题..."
+              aria-label="向 AI 助手提问"
+              placeholder="有什么想一起想想的？"
               disabled={isLoading}
             />
-            <button 
-              onClick={handleSend}
-              disabled={isLoading || !input.trim()}
-              className="win-button text-[11px] px-4"
-            >
-              发送
+            <button onClick={handleSend} disabled={isLoading || !input.trim()} className="chat-send" aria-label="发送消息" title="发送消息">
+              <ArrowUp size={19} strokeWidth={2.1} />
             </button>
           </div>
+          <p className="chat-compose-hint">{note ? '对话自动保存到当前笔记' : 'AI 的回答仅供参考'}<span>Enter 发送 · Shift + Enter 换行</span></p>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

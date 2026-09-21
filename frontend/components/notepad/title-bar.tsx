@@ -1,5 +1,7 @@
 "use client"
 
+import { BookOpen } from 'lucide-react'
+
 interface TitleBarProps {
   title: string
   onMinimize?: () => void
@@ -7,23 +9,13 @@ interface TitleBarProps {
   onClose?: () => void
 }
 
-export function TitleBar({ title, onClose }: TitleBarProps) {
+export function TitleBar({ title }: TitleBarProps) {
   return (
-    <div 
-      className="h-7 flex items-center justify-between px-1 text-white select-none"
-      style={{ background: 'linear-gradient(90deg, #000080, #1084d0)' }}
-    >
-      <div className="flex items-center gap-2 px-1">
-        <span className="text-[11px] font-bold tracking-tight">{title}</span>
-      </div>
-      <div className="flex">
-        <button
-          className="w-5 h-5 flex items-center justify-center text-black text-xs font-bold win-button"
-          onClick={onClose}
-          title="退出"
-        >
-          ✕
-        </button>
+    <div className="app-brand" aria-label={title}>
+      <div className="app-brand-icon"><BookOpen size={20} strokeWidth={1.5} /></div>
+      <div className="app-brand-copy">
+        <div className="app-brand-name">记事本</div>
+        <div className="app-brand-caption">SMART NOTES</div>
       </div>
     </div>
   )

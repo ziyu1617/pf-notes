@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { Search, PanelLeft, Plus, Leaf, LogOut, LockKeyhole } from 'lucide-react'
 import { useNotes, Note } from '@/hooks/use-notes'
 import { TitleBar } from './title-bar'
 import { MenuBar } from './menu-bar'
@@ -34,7 +35,7 @@ export function NotepadApp() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [showExitDialog, setShowExitDialog] = useState(false)
   
-  const windowRef = useRef<HTMLDivElement>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // 处理菜单操作 - 直接切换视图
   const handleMenuAction = useCallback((action: string) => {
@@ -48,6 +49,7 @@ export function NotepadApp() {
       'list': 'list',
       'new': 'new',
       'strawberry': 'strawberry',
+      'search': 'search',
     }
     
     if (viewMap[action]) {
@@ -131,54 +133,65 @@ export function NotepadApp() {
       'calendar': '日历',
       'list': '所有笔记',
       'new': '新建笔记',
-      'view': selectedNote ? `查看: ${selectedNote.title}` : '查看笔记',
-      'edit': selectedNote ? `编辑: ${selectedNote.title}` : '编辑笔记',
+      'view': '阅读笔记',
+      'edit': '编辑笔记',
       'search': '搜索笔记',
       'delete': '删除笔记',
-      'strawberry': '🍓 草莓',
+      'strawberry': '草莓',
     }
     return titles[currentView]
   }
 
+  const subtitles: Record<ViewType, string> = {
+    calendar: '让计划有序，让日常有迹可循。',
+    list: '一些想法，一些日常，慢慢写成自己的故事。',
+    new: '从一个念头开始，留住此刻。',
+    view: '回到文字里，也回到自己。',
+    edit: '再添一笔，让记忆更完整。',
+    search: '找回那些写下过的片刻。',
+    delete: '给你的笔记留一点整理的空间。',
+    strawberry: '不必想好怎么说，我都愿意听。',
+  }
+  const headerDate = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
+
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-[#008080] flex items-center justify-center">
-        <div className="bg-[#d4d0c8] p-4 win-border text-[12px]">
-          正在加载...
-        </div>
-      </div>
-    )
+    return <div className="app-scene"><div className="app-loading"><div className="app-loading-orb" />正在打开你的空间…</div></div>
   }
 
   return (
-    <div className="h-screen w-screen bg-[#008080] flex flex-col overflow-hidden">
-      {/* 主窗口 - 铺满整个原生窗口 */}
-      <div
-        ref={windowRef}
-        className="bg-[#d4d0c8] flex flex-col win-border relative select-none flex-1 min-h-0"
-      >
-
-        {/* 标题栏 */}
-        <TitleBar 
-          title="记事本 - 本地笔记应用" 
-          onClose={() => setShowExitDialog(true)}
-        />
-        
-        {/* 菜单栏 - 4 个主要功能按钮 */}
-        <MenuBar onAction={handleMenuAction} currentView={currentView} />
-        
-        {/* 当前视图标题栏 */}
-        <div className="px-3 py-2 bg-[#ece9d8] border-b border-[#808080] flex items-center justify-between">
-          <span className="text-[12px] font-bold">{getViewTitle()}</span>
-          {selectedNote && currentView !== 'list' && currentView !== 'calendar' && currentView !== 'new' && currentView !== 'strawberry' && (
-            <span className="text-[10px] text-[#808080]">
-              当前笔记: {selectedNote.title} [{selectedNote.category}]
-            </span>
-          )}
-        </div>
-        
-        {/* 内容区域 */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="app-scene">
+      <div className="app-window" data-collapsed={sidebarCollapsed}>
+        <aside className="app-sidebar">
+          <TitleBar title="记事本 · Smart Notes" />
+          <div className="app-nav-label">你的空间</div>
+          <MenuBar onAction={handleMenuAction} currentView={currentView} />
+          <div className="app-sidebar-bottom">
+            <div className="app-sidebar-note">
+              <Leaf size={17} strokeWidth={1.3} className="mb-2" />
+              <p>把生活写下来，<br />也把自己找回来。</p>
+              <div className="app-local"><span className="app-local-dot" />只保存在本机</div>
+            </div>
+            <button className="glass-button app-sidebar-new" onClick={() => handleMenuAction('new')}><Plus size={14} />记录此刻</button>
+          </div>
+        </aside>
+        <main className="app-main">
+          <div className="app-topbar">
+            <div className="app-topbar-left">
+              <button className="glass-icon-button app-quiet-button app-collapse-button" aria-label={sidebarCollapsed ? '展开侧栏' : '收起侧栏'} aria-expanded={!sidebarCollapsed} onClick={() => setSidebarCollapsed(value => !value)}><PanelLeft size={17} strokeWidth={1.5} /></button>
+              <span className="app-topbar-date">{headerDate}</span>
+            </div>
+            <div className="app-topbar-right">
+              <button className="app-search-shortcut" onClick={() => handleMenuAction('search')} aria-label="搜索笔记"><Search size={13} /><span>搜索你的笔记</span></button>
+              <div className="app-avatar" aria-label="我的本地空间">我</div>
+              <button className="glass-icon-button app-quiet-button" onClick={() => setShowExitDialog(true)} aria-label="退出记事本"><LogOut size={14} /></button>
+            </div>
+          </div>
+          <header className="app-page-heading">
+            <div><h1>{getViewTitle()}</h1><p>{subtitles[currentView]}</p></div>
+            {(currentView === 'list' || currentView === 'search') && <button className="glass-button app-heading-action" onClick={() => handleMenuAction('new')}><Plus size={14} />新建笔记</button>}
+          </header>
+          <div className="app-content">
+            <div className="app-view" key={currentView}>
           {currentView === 'calendar' && <CalendarView notes={notes} />}
 
           {currentView === 'list' && (
@@ -240,32 +253,12 @@ export function NotepadApp() {
           {currentView === 'strawberry' && (
             <StrawberryChatView />
           )}
-        </div>
-        
-        {/* 底部状态栏 */}
-        <div className="h-6 bg-[#d4d0c8] border-t border-[#808080] flex items-center px-2 text-[10px] shrink-0">
-          <div className="flex-1 win-inset px-2 py-0.5 mr-1">
-            笔记总数: {notes.length} | 分类: {categories.length}
+            </div>
           </div>
-          <div className="w-24 win-inset px-2 py-0.5 mr-1">
-            API 模式
-          </div>
-          <div className="w-28 win-inset px-2 py-0.5 mr-1">
-            实时同步
-          </div>
-          <div className="w-32 win-inset px-2 py-0.5">
-            桌面版
-          </div>
-        </div>
+          <footer className="app-footer"><span><LockKeyhole size={10} />本地空间 · {notes.length} 篇笔记</span><span className="app-footer-secondary">慢一点，也很好。</span></footer>
+        </main>
       </div>
-      
-      {/* 退出确认对话框 */}
-      {showExitDialog && (
-        <ExitDialog
-          onConfirm={handleExitConfirm}
-          onCancel={() => setShowExitDialog(false)}
-        />
-      )}
+      {showExitDialog && <ExitDialog onConfirm={handleExitConfirm} onCancel={() => setShowExitDialog(false)} />}
     </div>
   )
 }

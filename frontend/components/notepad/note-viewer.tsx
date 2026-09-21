@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from 'react'
+import { ArrowLeft, CalendarDays, PenLine, Sparkles, Trash2 } from 'lucide-react'
 import { Note } from '@/hooks/use-notes'
 import { AIChatView } from './ai-chat-view'
 import { NoteContent } from './note-content'
@@ -62,70 +63,52 @@ export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) 
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* 工具栏 */}
-      <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] flex items-center gap-2">
-        <button onClick={onBack} className="win-button text-[10px] px-2">
-          返回列表
-        </button>
-        <div className="w-px h-4 bg-[#808080]" />
-        <button onClick={onEdit} className="win-button text-[10px] px-2">
-          编辑
-        </button>
-        {onDelete && (
-          <button onClick={onDelete} className="win-button text-[10px] px-2">
-            删除
+    <div className="notes-viewer">
+      <div className="notes-viewer-toolbar">
+        <button onClick={onBack} className="notes-back-button"><ArrowLeft size={16} strokeWidth={1.7} /> 所有笔记</button>
+        <div className="notes-viewer-actions">
+          <button onClick={onEdit} className="glass-button"><PenLine size={15} strokeWidth={1.7} /> 编辑</button>
+          {onDelete && <button onClick={onDelete} className="glass-icon-button notes-delete-button" aria-label="删除笔记" title="删除笔记"><Trash2 size={15} strokeWidth={1.7} /></button>}
+          <span className="notes-toolbar-divider" />
+          <button onClick={() => setAiOpen(v => !v)} aria-pressed={aiOpen} className={`glass-button ${aiOpen ? 'glass-button-primary' : ''}`}>
+            <Sparkles size={15} strokeWidth={1.7} /> AI 建议
           </button>
-        )}
-        <div className="w-px h-4 bg-[#808080]" />
-        <button
-          onClick={() => setAiOpen(v => !v)}
-          className={`win-button text-[10px] px-2 ${aiOpen ? 'bg-[#000080] text-white' : ''}`}
-        >
-          💬 AI 建议
-        </button>
+        </div>
       </div>
 
-      {/* 主体：笔记（左 7）+ 可选的 AI 建议分栏（右 3） */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* 笔记区 */}
-        <div className={`flex flex-col p-2 gap-2 bg-[#ece9d8] overflow-auto ${aiOpen ? 'flex-[7] min-w-0' : 'flex-1'}`}>
-          {/* 笔记信息 */}
-          <div className="bg-[#d4d0c8] p-2 win-border">
-            <h2 className="text-[14px] font-bold mb-2">{note.title}</h2>
-            <div className="flex gap-4 text-[10px] text-[#404040]">
-              <span>分类: {note.category}</span>
-              <span>创建: {formatDate(note.createdAt)}</span>
-              <span>更新: {formatDate(note.updatedAt)}</span>
+      <div className={`notes-viewer-split ${aiOpen ? 'has-ai' : ''}`}>
+        <div className="notes-reading-scroll">
+          <article className="notes-reading-canvas glass-card">
+            <header className="notes-reading-header">
+              <span className="notes-note-category">{note.category}</span>
+              <h2>{note.title}</h2>
+              <div className="notes-reading-meta"><CalendarDays size={14} strokeWidth={1.5} /><span>{formatDate(note.createdAt)}</span><span className="notes-reading-updated">更新于 {formatDate(note.updatedAt)}</span></div>
+            </header>
+            <div
+              ref={contentRef}
+              tabIndex={0}
+              onKeyDown={onKeyDown}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setMenu({ x: e.clientX, y: e.clientY })
+              }}
+              className="notes-reading-body"
+              aria-label="笔记正文"
+            >
+              <NoteContent content={note.content} />
             </div>
-          </div>
-
-          {/* 笔记内容 */}
-          <div
-            ref={contentRef}
-            tabIndex={0}
-            onKeyDown={onKeyDown}
-            onContextMenu={(e) => {
-              e.preventDefault()
-              setMenu({ x: e.clientX, y: e.clientY })
-            }}
-            className="flex-1 bg-white p-3 win-inset overflow-auto min-h-[200px] outline-none select-text"
-          >
-            <NoteContent content={note.content} />
-          </div>
+            <div className="notes-reading-end"><span /><span className="notes-reading-end-dot" /><span /></div>
+          </article>
         </div>
 
-        {/* AI 建议分栏 */}
         {aiOpen && (
-          <div className="flex-[3] min-w-0 flex flex-col border-l-2 border-[#808080] overflow-hidden">
+          <div className="notes-ai-panel glass-card">
             <AIChatView note={note} embedded onClose={() => setAiOpen(false)} />
           </div>
         )}
       </div>
 
-      {menu && (
-        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
-      )}
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from 'react'
+import { Check, ChevronDown, ImagePlus, Leaf, Plus, X } from 'lucide-react'
 import { imageFilesFrom, uploadImageAsMarkdown } from '@/lib/images'
 import { readClipboard, writeClipboardText } from '@/lib/clipboard'
 import { ContextMenu, ContextMenuItem } from './context-menu'
@@ -165,79 +166,60 @@ export function NoteEditor({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
-        {isEditing ? '编辑笔记' : '新建笔记'}
-      </div>
-      
-      <div className="flex-1 flex flex-col p-2 gap-2 bg-[#ece9d8] overflow-auto">
-        {/* 标题输入 */}
-        <div className="flex items-center gap-2">
-          <label className="text-[11px] w-16">标题：</label>
+    <div className="notes-editor">
+      <div className="notes-editor-scroll">
+        <div className="notes-writing-canvas glass-card">
+          <div className="notes-writing-eyebrow"><Leaf size={15} strokeWidth={1.5} /><span>{isEditing ? '让想法继续生长' : '给今天，留一点文字'}</span></div>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="flex-1 p-1 text-[12px] win-input"
-            placeholder="输入笔记标题..."
+            className="notes-title-input"
+            aria-label="笔记标题"
+            placeholder="给这一刻起个名字"
           />
-        </div>
-        
-        {/* 分类选择 */}
-        <div className="flex items-center gap-2">
-          <label className="text-[11px] w-16">分类：</label>
-          {!showNewCategory ? (
-            <>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="flex-1 p-1 text-[12px] win-input"
-              >
-                <option value="">选择分类...</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => setShowNewCategory(true)}
-                className="win-button text-[11px] px-2"
-              >
-                + 新分类
-              </button>
-            </>
-          ) : (
-            <>
-              <input
-                type="text"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="flex-1 p-1 text-[12px] win-input"
-                placeholder="输入新分类名称..."
-              />
-              <button
-                onClick={() => setShowNewCategory(false)}
-                className="win-button text-[11px] px-2"
-              >
-                取消
-              </button>
-            </>
-          )}
-        </div>
-        
-        {/* 内容编辑 */}
-        <div className="flex-1 flex flex-col gap-1 min-h-0">
-          <div className="flex items-center gap-2">
-            <label className="text-[11px]">内容：</label>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="win-button text-[11px] px-2"
-            >
-              📷 插入图片
+
+          <div className="notes-editor-meta">
+            <label className="notes-meta-label" htmlFor="note-category">分类</label>
+            {!showNewCategory ? (
+              <>
+                <div className="notes-category-select-wrap">
+                  <select id="note-category" value={category} onChange={(e) => setCategory(e.target.value)} className="notes-category-select">
+                    <option value="">选择分类</option>
+                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                  <ChevronDown size={13} strokeWidth={1.8} aria-hidden="true" />
+                </div>
+                <button onClick={() => setShowNewCategory(true)} className="notes-text-button"><Plus size={14} strokeWidth={1.8} /> 新分类</button>
+              </>
+            ) : (
+              <>
+                <input id="note-category" type="text" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="glass-input notes-new-category" placeholder="新分类名称" autoFocus />
+                <button onClick={() => setShowNewCategory(false)} className="glass-icon-button" aria-label="取消新分类"><X size={15} /></button>
+              </>
+            )}
+            <span className="notes-editor-meta-dot" />
+            <span className="notes-meta-hint">慢慢写，不必着急。</span>
+          </div>
+
+          <div className="notes-writing-divider" />
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onPaste={handlePaste}
+            onDrop={handleDrop}
+            onContextMenu={openMenu}
+            className="notes-writing-input"
+            aria-label="笔记内容"
+            placeholder="从一个念头开始，写下你想记住的事…"
+          />
+
+          <div className="notes-writing-tools">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="notes-text-button">
+              <ImagePlus size={17} strokeWidth={1.5} /> 插入图片
             </button>
-            <span className="text-[10px] text-[#606060]">
-              {uploading ? '图片上传中…' : '可直接粘贴或拖入图片'}
-            </span>
+            <span className="notes-meta-hint" role="status">{uploading ? '图片上传中…' : '支持粘贴或拖入图片'}</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -250,32 +232,18 @@ export function NoteEditor({
               }}
             />
           </div>
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onPaste={handlePaste}
-            onDrop={handleDrop}
-            onContextMenu={openMenu}
-            className="flex-1 p-2 text-[12px] win-input resize-none font-mono leading-relaxed min-h-[300px]"
-            placeholder="输入笔记内容...（右键可选中/复制/粘贴；图片可直接粘贴或拖入）"
-          />
-        </div>
-        
-        {/* 操作按钮 */}
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onCancel} className="win-button text-[11px] px-4 py-1">
-            取消
-          </button>
-          <button onClick={handleSave} className="win-button text-[11px] px-4 py-1">
-            保存
-          </button>
         </div>
       </div>
 
-      {menu && (
-        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
-      )}
+      <div className="notes-editor-footer">
+        <span className="notes-word-count">{content.length.toLocaleString()} 字<span>每一段文字，都值得被记住</span></span>
+        <div className="notes-editor-actions">
+          <button onClick={onCancel} className="glass-button">取消</button>
+          <button onClick={handleSave} className="glass-button glass-button-primary"><Check size={15} strokeWidth={1.9} /> 保存笔记</button>
+        </div>
+      </div>
+
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />}
     </div>
   )
 }

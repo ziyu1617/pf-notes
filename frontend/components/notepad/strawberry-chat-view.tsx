@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { streamPost } from '@/lib/stream'
+import { ArrowUp, Heart, Trash2 } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -13,11 +14,15 @@ export function StrawberryChatView() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const sendStartedRef = useRef(false)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'end',
+    })
   }, [messages])
 
   // 加载和草莓的历史对话（独立于笔记，全局一条会话）
@@ -117,80 +122,82 @@ export function StrawberryChatView() {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleSend()
     }
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col p-2 bg-[#ece9d8] overflow-hidden">
-        {/* 标题 + 清空 */}
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[11px] font-bold">🍓 和草莓聊聊（对话会自动保存）</span>
-          {messages.length > 0 && (
-            <button
-              onClick={handleClear}
-              disabled={isLoading}
-              className="win-button text-[10px] px-2"
-            >
-              清空对话
-            </button>
-          )}
+    <section className="glass-chat strawberry-chat" aria-label="和草莓聊聊">
+      <header className="chat-header">
+        <div className="chat-heading">
+          <div className="chat-avatar chat-avatar-rose" aria-hidden="true">🍓</div>
+          <div>
+            <h2>和草莓聊聊</h2>
+            <p><span className="chat-status-dot" />一个随时愿意听你说话的朋友</p>
+          </div>
         </div>
+        {messages.length > 0 && (
+          <button
+            onClick={handleClear}
+            disabled={isLoading}
+            className="glass-icon-button chat-clear"
+            aria-label="清空与草莓的对话"
+            title="清空对话"
+          >
+            <Trash2 size={17} strokeWidth={1.7} />
+          </button>
+        )}
+      </header>
 
-        {/* 对话区 */}
-        <div className="flex-1 bg-white win-inset overflow-auto p-2">
-          {messages.length === 0 && (
-            <div className="text-[11px] text-[#808080] p-2">
-              嗨，我是草莓🍓 有什么开心的或者不开心的，都可以跟我说说，我都在听呀～
+      <div className="chat-messages" role="log" aria-label="与草莓的对话记录" aria-live="polite">
+        {messages.length === 0 && (
+          <div className="chat-welcome strawberry-welcome">
+            <div className="chat-welcome-orb" aria-hidden="true">🍓</div>
+            <span className="chat-eyebrow">A LITTLE SPACE FOR YOU</span>
+            <h3>这里，可以慢慢说。</h3>
+            <p>开心的小事，或是说不清的心情。<br />我是草莓，你说，我都在听。</p>
+            <div className="chat-suggestions">
+              {['今天有点累', '分享一件开心的事', '就想随便聊聊'].map(prompt => (
+                <button key={prompt} onClick={() => { setInput(prompt); inputRef.current?.focus() }} className="chat-suggestion">{prompt}</button>
+              ))}
             </div>
-          )}
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`mb-2 p-2 text-[11px] ${
-                msg.role === 'user'
-                  ? 'bg-[#ece9d8] ml-8'
-                  : 'bg-[#ffe6f0] mr-8'
-              }`}
-            >
-              <div className="text-[10px] font-bold mb-1">
-                {msg.role === 'user' ? '您' : '🍓 草莓'}
-              </div>
-              <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
-            </div>
-          ))}
-          {isLoading && messages[messages.length - 1]?.role === 'user' && (
-            <div className="mb-2 p-2 text-[11px] bg-[#ffe6f0] mr-8">
-              <div className="text-[10px] font-bold mb-1">🍓 草莓</div>
-              <span className="text-[#c2185b]">正在认真听你说...</span>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <article key={i} className={`chat-message ${msg.role === 'user' ? 'chat-message-user' : 'chat-message-assistant'}`}>
+            <span className="chat-message-author">{msg.role === 'user' ? '你' : '🍓 草莓'}</span>
+            <div className="chat-bubble"><p>{msg.content}</p></div>
+          </article>
+        ))}
+        {isLoading && messages[messages.length - 1]?.role === 'user' && (
+          <div className="chat-message chat-message-assistant">
+            <span className="chat-message-author">🍓 草莓</span>
+            <div className="chat-bubble chat-thinking"><span className="chat-typing" aria-hidden="true"><i /><i /><i /></span>正在认真听你说…</div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
-        {/* 输入区 */}
-        <div className="flex gap-2 mt-2">
-          <input
-            type="text"
+      <div className="chat-compose-area">
+        <div className="chat-composer">
+          <textarea
+            ref={inputRef}
+            rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 p-1 text-[12px] win-input"
-            placeholder="想和草莓说点什么..."
+            aria-label="想和草莓说的话"
+            placeholder="今天，有什么想和草莓说的？"
             disabled={isLoading}
           />
-          <button
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
-            className="win-button text-[11px] px-4"
-          >
-            发送
+          <button onClick={handleSend} disabled={isLoading || !input.trim()} className="chat-send" aria-label="发送消息" title="发送消息">
+            <ArrowUp size={19} strokeWidth={2.1} />
           </button>
         </div>
+        <p className="chat-compose-hint"><Heart size={11} strokeWidth={1.7} /> 对话自动保存，心情慢慢安放 <span>Enter 发送 · Shift + Enter 换行</span></p>
       </div>
-    </div>
+    </section>
   )
 }
