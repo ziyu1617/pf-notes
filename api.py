@@ -6,14 +6,17 @@ import uuid
 import sqlite3
 import datetime
 import logging
+import re
 from pathlib import Path
-from typing import Optional, List
+from typing import Annotated, Optional, List
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request, Path as ApiPath
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -165,6 +168,7 @@ V8.6-草莓
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -202,6 +206,35 @@ def init_db():
                 created_at TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS calendar_tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                color TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS calendar_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                date TEXT NOT NULL,
+                time TEXT NOT NULL DEFAULT '',
+                completed INTEGER NOT NULL DEFAULT 0 CHECK (completed IN (0, 1)),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS calendar_item_tags (
+                item_id INTEGER NOT NULL REFERENCES calendar_items(id) ON DELETE CASCADE,
+                tag_id INTEGER NOT NULL REFERENCES calendar_tags(id) ON DELETE CASCADE,
+                PRIMARY KEY (item_id, tag_id)
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_items(date, time)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_calendar_tag ON calendar_item_tags(tag_id)")
 
 
 def row_to_dict(row) -> dict:
@@ -289,6 +322,251 @@ class AIChatRequest(BaseModel):
 
 class StrawberryChatRequest(BaseModel):
     messages: List[ChatMessage]
+
+
+# ── 日历数据模型 ──────────────────────────────────────────
+
+CalendarId = Annotated[int, ApiPath(ge=1, le=9223372036854775807)]
+
+
+class CalendarRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_fields(cls, values):
+        if isinstance(values, dict) and any(value is None for value in values.values()):
+            raise ValueError("日历字段不能为 null；清空文字请使用空字符串，清空标签请使用空列表")
+        return values
+
+
+class CalendarTagCreate(CalendarRequest):
+    name: str
+    color: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        value = value.strip()
+        if not value or len(value) > 30:
+            raise ValueError("标签名称不能为空，且不能超过 30 个字符")
+        return value
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value):
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+            raise ValueError("标签颜色须为六位十六进制颜色，例如 #E89AA8")
+        return value.upper()
+
+
+class CalendarTagUpdate(CalendarTagCreate):
+    name: Optional[str] = None
+    color: Optional[str] = None
+
+
+class CalendarItemCreate(CalendarRequest):
+    title: str
+    description: str = ""
+    date: str
+    time: str = ""
+    tagIds: List[str] = Field(default_factory=list)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value):
+        value = value.strip()
+        if not value or len(value) > 200:
+            raise ValueError("事项标题不能为空，且不能超过 200 个字符")
+        return value
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, value):
+        if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            raise ValueError("日期须使用 YYYY-MM-DD 格式")
+        try:
+            datetime.date.fromisoformat(value)
+        except ValueError:
+            raise ValueError("请选择有效日期") from None
+        return value
+
+    @field_validator("time")
+    @classmethod
+    def validate_time(cls, value):
+        if value and not re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value):
+            raise ValueError("时间须使用 HH:MM 格式，或留空表示全天")
+        return value
+
+    @field_validator("tagIds")
+    @classmethod
+    def validate_tag_ids(cls, values):
+        if any(not re.fullmatch(r"[1-9][0-9]{0,18}", value)
+               or int(value) > 9223372036854775807 for value in values):
+            raise ValueError("标签编号无效")
+        return list(dict.fromkeys(values))
+
+
+class CalendarItemUpdate(CalendarItemCreate):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
+    tagIds: Optional[List[str]] = None
+    completed: Optional[StrictBool] = None
+
+
+@app.exception_handler(RequestValidationError)
+async def calendar_validation_error(request: Request, exc: RequestValidationError):
+    # 仅给新增日历接口提供中文提示，保留现有接口的错误结构。
+    if not request.url.path.startswith("/api/calendar"):
+        return await request_validation_exception_handler(request, exc)
+    error = exc.errors()[0]
+    detail = error["msg"]
+    if error["type"] == "value_error":
+        detail = detail.removeprefix("Value error, ")
+    else:
+        detail = {
+            "missing": "请填写所有必填字段",
+            "extra_forbidden": "请求包含不支持的日历字段",
+            "json_invalid": "日历数据格式有误",
+            "bool_type": "完成状态须为 true 或 false",
+        }.get(error["type"], "日历字段格式有误，请检查后重试")
+    return JSONResponse(status_code=422, content={"detail": detail})
+
+
+# ── 日历 CRUD ─────────────────────────────────────────────
+
+def calendar_tag_to_dict(row) -> dict:
+    return {"id": str(row["id"]), "name": row["name"], "color": row["color"]}
+
+
+def calendar_item_to_dict(row, tag_ids) -> dict:
+    return {
+        "id": str(row["id"]),
+        "title": row["title"],
+        "description": row["description"],
+        "date": row["date"],
+        "time": row["time"],
+        "completed": bool(row["completed"]),
+        "tagIds": tag_ids,
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def get_calendar_item(conn, item_id: int) -> dict:
+    row = conn.execute("SELECT * FROM calendar_items WHERE id = ?", (item_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="事项不存在")
+    tags = conn.execute(
+        "SELECT tag_id FROM calendar_item_tags WHERE item_id = ? ORDER BY tag_id", (item_id,)
+    ).fetchall()
+    return calendar_item_to_dict(row, [str(tag["tag_id"]) for tag in tags])
+
+
+def set_calendar_item_tags(conn, item_id: int, tag_ids: List[str]):
+    # 先检查全部标签；失败时由外层事务回滚事项及关联修改。
+    existing_ids = {str(row["id"]) for row in conn.execute("SELECT id FROM calendar_tags")}
+    if not set(tag_ids).issubset(existing_ids):
+        raise HTTPException(status_code=422, detail="所选标签不存在，请刷新后重试")
+    conn.execute("DELETE FROM calendar_item_tags WHERE item_id = ?", (item_id,))
+    conn.executemany(
+        "INSERT INTO calendar_item_tags (item_id, tag_id) VALUES (?, ?)",
+        [(item_id, int(tag_id)) for tag_id in tag_ids],
+    )
+
+
+@app.get("/api/calendar")
+def list_calendar():
+    with get_db() as conn:
+        tags = conn.execute("SELECT * FROM calendar_tags ORDER BY id").fetchall()
+        items = conn.execute("SELECT * FROM calendar_items ORDER BY date, time, id").fetchall()
+        item_tags = {}
+        for relation in conn.execute("SELECT * FROM calendar_item_tags ORDER BY tag_id"):
+            item_tags.setdefault(relation["item_id"], []).append(str(relation["tag_id"]))
+    return {
+        "tags": [calendar_tag_to_dict(tag) for tag in tags],
+        "items": [calendar_item_to_dict(item, item_tags.get(item["id"], [])) for item in items],
+    }
+
+
+@app.post("/api/calendar/tags", status_code=201)
+def create_calendar_tag(tag: CalendarTagCreate):
+    try:
+        with get_db() as conn:
+            cur = conn.execute(
+                "INSERT INTO calendar_tags (name, color, created_at) VALUES (?, ?, ?)",
+                (tag.name, tag.color, now()),
+            )
+            row = conn.execute("SELECT * FROM calendar_tags WHERE id = ?", (cur.lastrowid,)).fetchone()
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="已存在同名标签，请使用其他名称") from None
+    return calendar_tag_to_dict(row)
+
+
+@app.put("/api/calendar/tags/{tag_id}")
+def update_calendar_tag(tag_id: CalendarId, tag: CalendarTagUpdate):
+    try:
+        with get_db() as conn:
+            if not conn.execute("SELECT 1 FROM calendar_tags WHERE id = ?", (tag_id,)).fetchone():
+                raise HTTPException(status_code=404, detail="标签不存在")
+            updates = tag.model_dump(exclude_unset=True)
+            if updates:
+                set_clause = ", ".join(f"{key} = ?" for key in updates)
+                conn.execute(f"UPDATE calendar_tags SET {set_clause} WHERE id = ?", [*updates.values(), tag_id])
+            row = conn.execute("SELECT * FROM calendar_tags WHERE id = ?", (tag_id,)).fetchone()
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="已存在同名标签，请使用其他名称") from None
+    return calendar_tag_to_dict(row)
+
+
+@app.delete("/api/calendar/tags/{tag_id}")
+def delete_calendar_tag(tag_id: CalendarId):
+    with get_db() as conn:
+        cur = conn.execute("DELETE FROM calendar_tags WHERE id = ?", (tag_id,))
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="标签不存在")
+    return {"ok": True}
+
+
+@app.post("/api/calendar/items", status_code=201)
+def create_calendar_item(item: CalendarItemCreate):
+    timestamp = now()
+    with get_db() as conn:
+        cur = conn.execute(
+            """INSERT INTO calendar_items (title, description, date, time, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (item.title, item.description, item.date, item.time, timestamp, timestamp),
+        )
+        set_calendar_item_tags(conn, cur.lastrowid, item.tagIds)
+        result = get_calendar_item(conn, cur.lastrowid)
+    return result
+
+
+@app.put("/api/calendar/items/{item_id}")
+def update_calendar_item(item_id: CalendarId, item: CalendarItemUpdate):
+    with get_db() as conn:
+        get_calendar_item(conn, item_id)
+        updates = item.model_dump(exclude_unset=True)
+        if updates:
+            tag_ids = updates.pop("tagIds", None)
+            updates["updated_at"] = now()
+            set_clause = ", ".join(f"{key} = ?" for key in updates)
+            conn.execute(f"UPDATE calendar_items SET {set_clause} WHERE id = ?", [*updates.values(), item_id])
+            if tag_ids is not None:
+                set_calendar_item_tags(conn, item_id, tag_ids)
+        result = get_calendar_item(conn, item_id)
+    return result
+
+
+@app.delete("/api/calendar/items/{item_id}")
+def delete_calendar_item(item_id: CalendarId):
+    with get_db() as conn:
+        cur = conn.execute("DELETE FROM calendar_items WHERE id = ?", (item_id,))
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="事项不存在")
+    return {"ok": True}
 
 
 # ── 笔记 CRUD ─────────────────────────────────────────────

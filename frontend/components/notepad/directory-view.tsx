@@ -19,7 +19,7 @@ export function DirectoryView({
   return (
     <div className="flex-1 flex overflow-hidden">
       {/* 左侧分类列表 */}
-      <div className="w-48 border-r border-[#808080] bg-white win-inset overflow-auto">
+      <div className="w-36 shrink-0 border-r border-[#808080] bg-white win-inset overflow-auto sm:w-48">
         <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
           📁 分类目录
         </div>
@@ -46,11 +46,16 @@ export function DirectoryView({
       </div>
       
       {/* 右侧时间线 */}
-      <div className="flex-1 bg-white win-inset overflow-auto">
+      <div className="min-w-0 flex-1 bg-white win-inset overflow-auto">
         <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
           📅 按时间查看
         </div>
         <div className="p-2">
+          {Object.keys(notesByDate).length === 0 && (
+            <div className="p-4 text-center text-[11px] text-[#808080]">
+              暂无笔记，请点击 [3] 新建笔记 创建
+            </div>
+          )}
           {Object.entries(notesByDate).map(([date, notes]) => (
             <div key={date} className="mb-3">
               <div className="text-[11px] font-bold px-2 py-1 bg-[#ece9d8] border border-[#808080] mb-1">

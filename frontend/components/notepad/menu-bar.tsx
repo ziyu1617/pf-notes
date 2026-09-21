@@ -6,7 +6,7 @@ interface MenuBarProps {
 }
 
 const menuItems = [
-  { key: '1', label: '查看目录', action: 'directory', icon: '📁' },
+  { key: '1', label: '日历', action: 'calendar', icon: '📅' },
   { key: '2', label: '所有笔记', action: 'list', icon: '📋' },
   { key: '3', label: '新建笔记', action: 'new', icon: '✏️' },
   { key: '4', label: '草莓', action: 'strawberry', icon: '🍓' },
@@ -19,6 +19,8 @@ export function MenuBar({ onAction, currentView }: MenuBarProps) {
         <button
           key={item.key}
           onClick={() => onAction(item.action)}
+          aria-current={currentView === item.action ? 'page' : undefined}
+          style={currentView === item.action ? { backgroundColor: '#000080', color: '#ffffff' } : undefined}
           className={`win-button text-[11px] px-2 py-0.5 whitespace-nowrap ${
             currentView === item.action ? 'bg-[#000080] text-white' : ''
           }`}

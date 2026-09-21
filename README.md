@@ -5,6 +5,7 @@
 ## ✨ 功能
 
 - 📝 笔记的增删改查，按分类 / 日期浏览，全文搜索
+- 📅 **日历**：按月浏览、按日期管理事项，支持时间、备注、完成状态和多标签；颜色标签可添加、删除和筛选
 - 💬 **AI 建议**：在笔记页右侧开启对话分栏（笔记 7 : AI 3），基于当前笔记内容流式问答，对话按笔记持久化
 - 🍓 **草莓**：一个帮你结合日记反思的AI助手，流式输出、对话自动保存
 - 🖥️ 原生桌面窗口（无需浏览器），也可用浏览器访问
@@ -76,11 +77,16 @@ cd frontend && npm install && cd ..    # 前端（首次）
 
 CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `assist` `chat` `open`
 
+桌面 / Web 顶部入口：`[1] 日历`、`[2] 所有笔记`、`[3] 新建笔记`、`[4] 草莓`。“所有笔记”使用分类目录与时间线视图。日历中选择日期后点击“添加事项”；“管理标签”可创建颜色标签，编辑事项时可选择多个标签。删除标签会解除关联，保留事项。
+
 ## 🔌 主要接口（后端 `:8000`）
 
 | 用途 | 接口 |
 |---|---|
 | 笔记 CRUD | `GET/POST /api/notes`、`GET/PUT/DELETE /api/notes/{id}` |
+| 日历数据 | `GET /api/calendar` |
+| 日历事项 | `POST /api/calendar/items`、`PUT/DELETE /api/calendar/items/{id}` |
+| 日历标签 | `POST /api/calendar/tags`、`PUT/DELETE /api/calendar/tags/{id}` |
 | 笔记对话历史 | `GET/POST/DELETE /api/notes/{id}/chat` |
 | AI 建议（流式，`text/plain`） | `POST /api/ai/chat` |
 | AI 总结 / 助写（流式，后端仍提供） | `POST /api/ai/summarize`、`POST /api/ai/write` |
@@ -89,10 +95,12 @@ CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `ass
 
 ## 💾 数据与配置
 
-- 笔记与对话存于 `~/.smart_notes.db`（SQLite，已被 git 忽略，不会提交）
+- 笔记、日历事项、标签与对话存于 `~/.smart_notes.db`（SQLite，已被 git 忽略，不会提交）；启动时自动添加日历表，保留原有数据
 - 切换模型 / base_url：见 `api.py` 顶部的 `MODEL`、`ZHIPU_BASE_URL`
 - 发送给模型的上下文最多保留最近 `MAX_CONTEXT_MESSAGES` 条，避免无限增长
 
 ## 📝 说明
 
 - 前端 `frontend/out`、`frontend/node_modules` 不入库；首次运行由 `desktop.sh` 自动安装并构建
+- 更新源码后，运行 `cd frontend && NEXT_OUTPUT=export npm run build` 重新构建，再重新启动桌面应用使新接口生效
+- 日历接口回归测试：在项目根目录运行 `python3 -m unittest discover -s tests -p 'test_calendar_api.py' -v`（使用临时数据库）

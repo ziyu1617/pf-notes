@@ -5,7 +5,7 @@ import { useNotes, Note } from '@/hooks/use-notes'
 import { TitleBar } from './title-bar'
 import { MenuBar } from './menu-bar'
 import { DirectoryView } from './directory-view'
-import { NoteListView } from './note-list-view'
+import { CalendarView } from './calendar-view'
 import { NoteEditor } from './note-editor'
 import { NoteViewer } from './note-viewer'
 import { SearchView } from './search-view'
@@ -14,7 +14,7 @@ import { StrawberryChatView } from './strawberry-chat-view'
 import { ExitDialog } from './exit-dialog'
 
 // 视图类型
-type ViewType = 'directory' | 'list' | 'new' | 'view' | 'edit' | 'search' | 'delete' | 'strawberry'
+type ViewType = 'calendar' | 'list' | 'new' | 'view' | 'edit' | 'search' | 'delete' | 'strawberry'
 
 export function NotepadApp() {
   const {
@@ -44,7 +44,7 @@ export function NotepadApp() {
     }
     
     const viewMap: Record<string, ViewType> = {
-      'directory': 'directory',
+      'calendar': 'calendar',
       'list': 'list',
       'new': 'new',
       'strawberry': 'strawberry',
@@ -58,12 +58,18 @@ export function NotepadApp() {
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
+        return
+      }
+      if (e.target instanceof Element && (
+        e.target.closest('input, textarea, select, [role="textbox"], [role="combobox"], [role="checkbox"], [role="dialog"]') ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      )) {
         return
       }
       
       const keyMap: Record<string, string> = {
-        '1': 'directory',
+        '1': 'calendar',
         '2': 'list',
         '3': 'new',
         '4': 'strawberry',
@@ -122,7 +128,7 @@ export function NotepadApp() {
   // 获取视图标题
   const getViewTitle = () => {
     const titles: Record<ViewType, string> = {
-      'directory': '查看目录',
+      'calendar': '日历',
       'list': '所有笔记',
       'new': '新建笔记',
       'view': selectedNote ? `查看: ${selectedNote.title}` : '查看笔记',
@@ -164,7 +170,7 @@ export function NotepadApp() {
         {/* 当前视图标题栏 */}
         <div className="px-3 py-2 bg-[#ece9d8] border-b border-[#808080] flex items-center justify-between">
           <span className="text-[12px] font-bold">{getViewTitle()}</span>
-          {selectedNote && currentView !== 'list' && currentView !== 'directory' && currentView !== 'new' && currentView !== 'strawberry' && (
+          {selectedNote && currentView !== 'list' && currentView !== 'calendar' && currentView !== 'new' && currentView !== 'strawberry' && (
             <span className="text-[10px] text-[#808080]">
               当前笔记: {selectedNote.title} [{selectedNote.category}]
             </span>
@@ -173,25 +179,14 @@ export function NotepadApp() {
         
         {/* 内容区域 */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          {currentView === 'directory' && (
+          {currentView === 'calendar' && <CalendarView notes={notes} />}
+
+          {currentView === 'list' && (
             <DirectoryView
               notesByDate={getNotesByDate()}
               notesByCategory={getNotesByCategory}
               categories={categories}
               onSelectNote={handleOpenNote}
-            />
-          )}
-          
-          {currentView === 'list' && (
-            <NoteListView
-              notes={notes}
-              selectedNote={selectedNote}
-              onSelectNote={handleSelectNote}
-              onViewNote={handleOpenNote}
-              onDeleteNote={(note) => {
-                setSelectedNote(note)
-                setCurrentView('delete')
-              }}
             />
           )}
           
