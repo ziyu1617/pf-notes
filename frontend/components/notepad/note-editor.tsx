@@ -9,8 +9,9 @@ interface NoteEditorProps {
   initialTitle?: string
   initialContent?: string
   initialCategory?: string
+  diaryDate?: string
   categories: string[]
-  onSave: (title: string, content: string, category: string) => void
+  onSave: (title: string, content: string, category: string) => void | Promise<void>
   onCancel: () => void
   isEditing?: boolean
 }
@@ -19,6 +20,7 @@ export function NoteEditor({
   initialTitle = '',
   initialContent = '',
   initialCategory = '',
+  diaryDate,
   categories,
   onSave,
   onCancel,
@@ -30,6 +32,10 @@ export function NoteEditor({
   const [newCategory, setNewCategory] = useState('')
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const savingRef = useRef(false)
+  const categoryOptions = Array.from(new Set([...categories, initialCategory].filter(Boolean)))
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -151,26 +157,44 @@ export function NoteEditor({
     { label: '全选', shortcut: 'Ctrl+A', disabled: content.length === 0, onClick: selectAll },
   ]
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (savingRef.current || uploading) return
+    setSaveError('')
     if (!title.trim() || !content.trim()) {
-      alert('标题和内容不能为空！')
+      setSaveError('标题和内容不能为空！')
       return
     }
     const finalCategory = showNewCategory ? newCategory.trim() : category
     if (!finalCategory) {
-      alert('请选择或输入分类！')
+      setSaveError('请选择或输入分类！')
       return
     }
-    onSave(title.trim(), content.trim(), finalCategory)
+    savingRef.current = true
+    setSaving(true)
+    setMenu(null)
+    try {
+      await onSave(title.trim(), content.trim(), finalCategory)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : '笔记保存失败，请稍后重试。')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden" aria-busy={saving}>
       <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
-        {isEditing ? '编辑笔记' : '新建笔记'}
+        {diaryDate ? (isEditing ? '编辑日记' : '写日记') : (isEditing ? '编辑笔记' : '新建笔记')}
       </div>
       
-      <div className="flex-1 flex flex-col p-2 gap-2 bg-[#ece9d8] overflow-auto">
+      <fieldset disabled={saving} className="flex-1 min-w-0 flex flex-col p-2 gap-2 border-0 bg-[#ece9d8] overflow-auto">
+        {diaryDate && (
+          <div className="win-inset bg-[#fff5fa] px-3 py-2 text-[11px] text-[#80405f]">
+            日记日期：<time dateTime={diaryDate} className="font-bold">{diaryDate}</time>
+            <span className="ml-2 text-[10px]">保存后归入这一天</span>
+          </div>
+        )}
         {/* 标题输入 */}
         <div className="flex items-center gap-2">
           <label className="text-[11px] w-16">标题：</label>
@@ -194,7 +218,7 @@ export function NoteEditor({
                 className="flex-1 p-1 text-[12px] win-input"
               >
                 <option value="">选择分类...</option>
-                {categories.map(cat => (
+                {categoryOptions.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -231,6 +255,7 @@ export function NoteEditor({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              disabled={saving || uploading}
               className="win-button text-[11px] px-2"
             >
               📷 插入图片
@@ -262,16 +287,17 @@ export function NoteEditor({
           />
         </div>
         
+        {saveError && <p role="alert" className="text-[11px] text-[#a00000]">{saveError}</p>}
         {/* 操作按钮 */}
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onCancel} className="win-button text-[11px] px-4 py-1">
             取消
           </button>
-          <button onClick={handleSave} className="win-button text-[11px] px-4 py-1">
-            保存
+          <button onClick={() => { void handleSave() }} disabled={saving || uploading} className="win-button text-[11px] px-4 py-1">
+            {saving ? '保存中…' : '保存'}
           </button>
         </div>
-      </div>
+      </fieldset>
 
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />

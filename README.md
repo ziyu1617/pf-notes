@@ -79,6 +79,8 @@ CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `ass
 
 桌面 / Web 顶部入口：`[1] 日历`、`[2] 所有笔记`、`[3] 新建笔记`、`[4] 草莓`。“所有笔记”使用分类目录与时间线视图。日历中选择日期后点击“添加事项”；“管理标签”可创建颜色标签，编辑事项时可选择多个标签。删除标签会解除关联，保留事项。
 
+右键日历日期，选择“新建当天日记”，即可补写过去的日记。保存后该日期显示粉色描边和“日记”标识；双击日期格即可查看当天日记，或聚焦日期后按 Enter 打开。当天有多篇时默认打开最近更新的一篇，其余仍可在“所有笔记”中查看。返回日历时恢复所选日期。日记按所选日期归档，实际创建时间仍保留；旧笔记继续按创建日期显示。
+
 ## 🔌 主要接口（后端 `:8000`）
 
 | 用途 | 接口 |
@@ -93,9 +95,11 @@ CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `ass
 | 草莓（流式） | `POST /api/ai/strawberry` |
 | 草莓对话历史 | `GET/POST/DELETE /api/strawberry/chat` |
 
+笔记接口支持可选 `diaryDate`（`YYYY-MM-DD`）；更新时省略该字段会保留原日期，传 `null` 可清空。
+
 ## 💾 数据与配置
 
-- 笔记、日历事项、标签与对话存于 `~/.smart_notes.db`（SQLite，已被 git 忽略，不会提交）；启动时自动添加日历表，保留原有数据
+- 笔记、日历事项、标签与对话存于 `~/.smart_notes.db`（SQLite，已被 git 忽略，不会提交）；启动时自动添加日历表和日记日期字段，保留原有数据
 - 切换模型 / base_url：见 `api.py` 顶部的 `MODEL`、`ZHIPU_BASE_URL`
 - 发送给模型的上下文最多保留最近 `MAX_CONTEXT_MESSAGES` 条，避免无限增长
 
@@ -103,4 +107,4 @@ CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `ass
 
 - 前端 `frontend/out`、`frontend/node_modules` 不入库；首次运行由 `desktop.sh` 自动安装并构建
 - 更新源码后，运行 `cd frontend && NEXT_OUTPUT=export npm run build` 重新构建，再重新启动桌面应用使新接口生效
-- 日历接口回归测试：在项目根目录运行 `python3 -m unittest discover -s tests -p 'test_calendar_api.py' -v`（使用临时数据库）
+- 日历与日记日期接口回归测试：在项目根目录运行 `python3 -m unittest discover -s tests -v`（使用临时数据库）

@@ -180,6 +180,7 @@ def init_db():
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 category TEXT NOT NULL DEFAULT '未分类',
+                diary_date TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -188,6 +189,9 @@ def init_db():
             conn.execute("ALTER TABLE notes ADD COLUMN category TEXT NOT NULL DEFAULT '未分类'")
         except sqlite3.OperationalError:
             pass
+        note_columns = {row["name"] for row in conn.execute("PRAGMA table_info(notes)")}
+        if "diary_date" not in note_columns:
+            conn.execute("ALTER TABLE notes ADD COLUMN diary_date TEXT")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS chat_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -243,6 +247,7 @@ def row_to_dict(row) -> dict:
         "title": row["title"],
         "content": row["content"],
         "category": row["category"],
+        "diaryDate": row["diary_date"] if "diary_date" in row.keys() else None,
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
@@ -289,13 +294,30 @@ init_db()
 
 # ── 数据模型 ──────────────────────────────────────────────
 
-class NoteCreate(BaseModel):
+class DiaryDateFields(BaseModel):
+    diaryDate: Optional[str] = None
+
+    @field_validator("diaryDate")
+    @classmethod
+    def validate_diary_date(cls, value):
+        if value is None:
+            return None
+        if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            raise ValueError("日记日期须使用 YYYY-MM-DD 格式")
+        try:
+            datetime.date.fromisoformat(value)
+        except ValueError:
+            raise ValueError("请选择有效的日记日期") from None
+        return value
+
+
+class NoteCreate(DiaryDateFields):
     title: str
     content: str
     category: str = "未分类"
 
 
-class NoteUpdate(BaseModel):
+class NoteUpdate(DiaryDateFields):
     title: Optional[str] = None
     content: Optional[str] = None
     category: Optional[str] = None
@@ -583,8 +605,8 @@ def create_note(note: NoteCreate):
     t = now()
     with get_db() as conn:
         cur = conn.execute(
-            "INSERT INTO notes (title, content, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (note.title, note.content, note.category, t, t)
+            "INSERT INTO notes (title, content, category, diary_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (note.title, note.content, note.category, note.diaryDate, t, t)
         )
         row = conn.execute("SELECT * FROM notes WHERE id = ?", (cur.lastrowid,)).fetchone()
     return row_to_dict(row)
@@ -604,7 +626,12 @@ def update_note(note_id: int, note: NoteUpdate):
     with get_db() as conn:
         if not conn.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
             raise HTTPException(status_code=404, detail="笔记不存在")
-        updates: dict = {k: v for k, v in note.model_dump().items() if v is not None}
+        # 省略日期代表保留原值，显式 null 代表清空；旧字段维持忽略 null 的行为。
+        updates = {
+            "diary_date" if key == "diaryDate" else key: value
+            for key, value in note.model_dump(exclude_unset=True).items()
+            if value is not None or key == "diaryDate"
+        }
         if not updates:
             row = conn.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
             return row_to_dict(row)

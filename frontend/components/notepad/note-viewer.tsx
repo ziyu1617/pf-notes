@@ -12,9 +12,10 @@ interface NoteViewerProps {
   onEdit: () => void
   onDelete?: () => void
   onBack: () => void
+  backLabel?: string
 }
 
-export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) {
+export function NoteViewer({ note, onEdit, onDelete, onBack, backLabel = '返回列表' }: NoteViewerProps) {
   const [aiOpen, setAiOpen] = useState(false)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -66,7 +67,7 @@ export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) 
       {/* 工具栏 */}
       <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] flex items-center gap-2">
         <button onClick={onBack} className="win-button text-[10px] px-2">
-          返回列表
+          {backLabel}
         </button>
         <div className="w-px h-4 bg-[#808080]" />
         <button onClick={onEdit} className="win-button text-[10px] px-2">
@@ -93,7 +94,8 @@ export function NoteViewer({ note, onEdit, onDelete, onBack }: NoteViewerProps) 
           {/* 笔记信息 */}
           <div className="bg-[#d4d0c8] p-2 win-border">
             <h2 className="text-[14px] font-bold mb-2">{note.title}</h2>
-            <div className="flex gap-4 text-[10px] text-[#404040]">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#404040]">
+              {note.diaryDate && <span>日记日期: <time dateTime={note.diaryDate}>{note.diaryDate}</time></span>}
               <span>分类: {note.category}</span>
               <span>创建: {formatDate(note.createdAt)}</span>
               <span>更新: {formatDate(note.updatedAt)}</span>

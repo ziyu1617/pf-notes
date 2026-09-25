@@ -7,8 +7,42 @@ export interface Note {
   title: string
   content: string
   category: string
+  diaryDate?: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** The diary's intended day, independent of when a backfilled note was saved. */
+export function getNoteDate(note: Pick<Note, 'diaryDate' | 'createdAt'>): string {
+  if (note.diaryDate) return note.diaryDate
+
+  // API/CLI timestamps have no timezone. Preserve their local calendar date;
+  // replacing the SQL separator also keeps ISO parsing consistent in Safari.
+  const timestamp = note.createdAt.trim().replace(' ', 'T')
+  if (/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/.test(timestamp)) {
+    return timestamp.slice(0, 10)
+  }
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+async function noteRequest(path: string, options?: RequestInit): Promise<Response> {
+  let response: Response
+  try {
+    response = await fetch(path, options)
+  } catch {
+    throw new Error('无法连接笔记服务，请检查网络后重试。')
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    const detail: unknown = data?.detail
+    const message = typeof detail === 'string' ? detail : Array.isArray(detail)
+      ? detail.map(value => typeof value?.msg === 'string' ? value.msg.replace(/^Value error, /, '') : '').filter(Boolean).join('；')
+      : ''
+    throw new Error(message || `笔记操作失败（${response.status}），请稍后重试。`)
+  }
+  return response
 }
 
 export function useNotes() {
@@ -16,9 +50,10 @@ export function useNotes() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    fetch('/api/notes')
+    noteRequest('/api/notes')
       .then(r => r.json())
       .then((data: Note[]) => {
+        if (!Array.isArray(data)) throw new Error('笔记数据格式有误，请刷新后重试。')
         setNotes(data)
         setIsLoaded(true)
       })
@@ -26,7 +61,7 @@ export function useNotes() {
   }, [])
 
   const addNote = useCallback(async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> => {
-    const res = await fetch('/api/notes', {
+    const res = await noteRequest('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(note),
@@ -37,7 +72,7 @@ export function useNotes() {
   }, [])
 
   const updateNote = useCallback(async (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
-    const res = await fetch(`/api/notes/${id}`, {
+    const res = await noteRequest(`/api/notes/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -48,7 +83,7 @@ export function useNotes() {
   }, [])
 
   const deleteNote = useCallback(async (id: string) => {
-    await fetch(`/api/notes/${id}`, { method: 'DELETE' })
+    await noteRequest(`/api/notes/${id}`, { method: 'DELETE' })
     setNotes(prev => prev.filter(n => n.id !== id))
   }, [])
 
@@ -60,14 +95,16 @@ export function useNotes() {
 
   const getNotesByDate = useCallback(() => {
     const grouped: Record<string, Note[]> = {}
-    notes.forEach(note => {
-      const date = new Date(note.createdAt).toLocaleDateString('zh-CN', {
+    const datedNotes = notes.map(note => ({ note, date: getNoteDate(note) }))
+      .sort((a, b) => b.date.localeCompare(a.date))
+    datedNotes.forEach(({ note, date }) => {
+      const label = date ? new Date(`${date}T12:00:00`).toLocaleDateString('zh-CN', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
-      })
-      if (!grouped[date]) grouped[date] = []
-      grouped[date].push(note)
+      }) : '未知日期'
+      if (!grouped[label]) grouped[label] = []
+      grouped[label].push(note)
     })
     return grouped
   }, [notes])

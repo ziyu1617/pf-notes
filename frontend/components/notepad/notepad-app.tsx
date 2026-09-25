@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNotes, Note } from '@/hooks/use-notes'
+import { useNotes, getNoteDate, type Note } from '@/hooks/use-notes'
 import { TitleBar } from './title-bar'
 import { MenuBar } from './menu-bar'
 import { DirectoryView } from './directory-view'
@@ -30,9 +30,12 @@ export function NotepadApp() {
   } = useNotes()
 
   // 当前视图
-  const [currentView, setCurrentView] = useState<ViewType>('list')
+  const [currentView, setCurrentView] = useState<ViewType>('calendar')
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [showExitDialog, setShowExitDialog] = useState(false)
+  const [calendarDate, setCalendarDate] = useState<string | undefined>()
+  const [draftDiaryDate, setDraftDiaryDate] = useState<string | null>(null)
+  const [noteOrigin, setNoteOrigin] = useState<'list' | 'calendar'>('list')
   
   const windowRef = useRef<HTMLDivElement>(null)
 
@@ -51,6 +54,8 @@ export function NotepadApp() {
     }
     
     if (viewMap[action]) {
+      setDraftDiaryDate(null)
+      setNoteOrigin('list')
       setCurrentView(viewMap[action])
     }
   }, [])
@@ -92,13 +97,32 @@ export function NotepadApp() {
 
   // 打开查看笔记
   const handleOpenNote = (note: Note) => {
+    setDraftDiaryDate(null)
+    setNoteOrigin('list')
     setSelectedNote(note)
     setCurrentView('view')
   }
 
+  const handleOpenCalendarNote = (note: Note) => {
+    setCalendarDate(getNoteDate(note))
+    setDraftDiaryDate(null)
+    setNoteOrigin('calendar')
+    setSelectedNote(note)
+    setCurrentView('view')
+  }
+
+  const handleCreateDiary = (date: string) => {
+    setCalendarDate(date)
+    setDraftDiaryDate(date)
+    setNoteOrigin('calendar')
+    setSelectedNote(null)
+    setCurrentView('new')
+  }
+
   // 保存新笔记
   const handleSaveNewNote = async (title: string, content: string, category: string) => {
-    const newNote = await addNote({ title, content, category })
+    const newNote = await addNote({ title, content, category, ...(draftDiaryDate ? { diaryDate: draftDiaryDate } : {}) })
+    setDraftDiaryDate(null)
     setSelectedNote(newNote)
     setCurrentView('view')
   }
@@ -116,28 +140,13 @@ export function NotepadApp() {
     if (selectedNote?.id === id) {
       setSelectedNote(null)
     }
-    setCurrentView('list')
+    setCurrentView(noteOrigin)
   }
 
   // 退出确认
   const handleExitConfirm = () => {
     setShowExitDialog(false)
     alert('感谢使用！您的笔记已保存。刷新页面可重新打开应用。')
-  }
-
-  // 获取视图标题
-  const getViewTitle = () => {
-    const titles: Record<ViewType, string> = {
-      'calendar': '日历',
-      'list': '所有笔记',
-      'new': '新建笔记',
-      'view': selectedNote ? `查看: ${selectedNote.title}` : '查看笔记',
-      'edit': selectedNote ? `编辑: ${selectedNote.title}` : '编辑笔记',
-      'search': '搜索笔记',
-      'delete': '删除笔记',
-      'strawberry': '🍓 草莓',
-    }
-    return titles[currentView]
   }
 
   if (!isLoaded) {
@@ -167,19 +176,17 @@ export function NotepadApp() {
         {/* 菜单栏 - 4 个主要功能按钮 */}
         <MenuBar onAction={handleMenuAction} currentView={currentView} />
         
-        {/* 当前视图标题栏 */}
-        <div className="px-3 py-2 bg-[#ece9d8] border-b border-[#808080] flex items-center justify-between">
-          <span className="text-[12px] font-bold">{getViewTitle()}</span>
-          {selectedNote && currentView !== 'list' && currentView !== 'calendar' && currentView !== 'new' && currentView !== 'strawberry' && (
-            <span className="text-[10px] text-[#808080]">
-              当前笔记: {selectedNote.title} [{selectedNote.category}]
-            </span>
-          )}
-        </div>
-        
         {/* 内容区域 */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          {currentView === 'calendar' && <CalendarView notes={notes} />}
+          {currentView === 'calendar' && (
+            <CalendarView
+              notes={notes}
+              initialDate={calendarDate}
+              onDateChange={setCalendarDate}
+              onCreateDiary={handleCreateDiary}
+              onOpenNote={handleOpenCalendarNote}
+            />
+          )}
 
           {currentView === 'list' && (
             <DirectoryView
@@ -192,9 +199,12 @@ export function NotepadApp() {
           
           {currentView === 'new' && (
             <NoteEditor
+              key={draftDiaryDate ?? 'new-note'}
+              initialCategory={draftDiaryDate ? '日记' : ''}
+              diaryDate={draftDiaryDate ?? undefined}
               categories={categories}
               onSave={handleSaveNewNote}
-              onCancel={() => setCurrentView('list')}
+              onCancel={() => { setDraftDiaryDate(null); setCurrentView(noteOrigin) }}
             />
           )}
           
@@ -203,12 +213,15 @@ export function NotepadApp() {
               note={selectedNote}
               onEdit={() => setCurrentView('edit')}
               onDelete={() => setCurrentView('delete')}
-              onBack={() => setCurrentView('list')}
+              onBack={() => setCurrentView(noteOrigin)}
+              backLabel={noteOrigin === 'calendar' ? '返回日历' : undefined}
             />
           )}
           
           {currentView === 'edit' && selectedNote && (
             <NoteEditor
+              key={selectedNote.id}
+              diaryDate={selectedNote.diaryDate ?? undefined}
               initialTitle={selectedNote.title}
               initialContent={selectedNote.content}
               initialCategory={selectedNote.category}
@@ -233,7 +246,7 @@ export function NotepadApp() {
             <DeleteView
               note={selectedNote}
               onDelete={handleDeleteNote}
-              onCancel={() => setCurrentView('list')}
+              onCancel={() => setCurrentView(noteOrigin)}
             />
           )}
           

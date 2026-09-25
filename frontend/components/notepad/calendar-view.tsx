@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCalendar, type CalendarItem, type CalendarItemInput, type CalendarTag } from '@/hooks/use-calendar'
-import type { Note } from '@/hooks/use-notes'
+import { getNoteDate, type Note } from '@/hooks/use-notes'
+import { ContextMenu } from './context-menu'
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 const TAG_COLORS = [
@@ -36,19 +37,33 @@ function TagBadge({ tag }: { tag: CalendarTag }) {
   )
 }
 
-export function CalendarView({ notes }: { notes: Note[] }) {
+interface CalendarViewProps {
+  notes: Note[]
+  initialDate?: string
+  onDateChange: (date: string) => void
+  onCreateDiary: (date: string) => void
+  onOpenNote: (note: Note) => void
+}
+
+export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, onOpenNote }: CalendarViewProps) {
   const { items, tags, isLoaded, error, reload, addItem, updateItem, deleteItem, addTag, deleteTag } = useCalendar()
   const today = dateKey(new Date())
-  const [selectedDate, setSelectedDate] = useState(today)
-  const [month, setMonth] = useState(today.slice(0, 7))
-  const diaryDates = useMemo(() => {
-    const dates = new Set<string>()
+  const [selectedDate, setSelectedDate] = useState(initialDate || today)
+  const [month, setMonth] = useState((initialDate || today).slice(0, 7))
+  const [dateMenu, setDateMenu] = useState<{ date: string; x: number; y: number } | null>(null)
+  const notesByDate = useMemo(() => {
+    const grouped = new Map<string, Note[]>()
     for (const note of notes) {
-      // SQLite timestamps are local time; normalize the separator for WebKit.
-      const createdAt = new Date(note.createdAt.replace(' ', 'T'))
-      if (!Number.isNaN(createdAt.getTime())) dates.add(dateKey(createdAt))
+      const key = getNoteDate(note)
+      if (!key) continue
+      const group = grouped.get(key) ?? []
+      group.push(note)
+      grouped.set(key, group)
     }
-    return dates
+    for (const group of grouped.values()) {
+      group.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id, undefined, { numeric: true }))
+    }
+    return grouped
   }, [notes])
   const [filterTagId, setFilterTagId] = useState('')
   const [draft, setDraft] = useState<CalendarItemInput | null>(null)
@@ -100,7 +115,6 @@ export function CalendarView({ notes }: { notes: Note[] }) {
   }, [items, filterTagId])
 
   const dayItems = itemsByDate.get(selectedDate) ?? []
-  const monthItems = items.filter(item => item.date.startsWith(month) && (!filterTagId || item.tagIds.includes(filterTagId)))
 
   async function runAction(action: () => Promise<void>) {
     if (busyRef.current) return
@@ -122,14 +136,22 @@ export function CalendarView({ notes }: { notes: Note[] }) {
     const next = parseDate(`${month}-01`)
     next.setMonth(next.getMonth() + offset)
     if (next.getFullYear() < 1 || next.getFullYear() > 9999) return
-    setMonth(dateKey(next).slice(0, 7))
-    setSelectedDate(dateKey(next))
+    selectDay(dateKey(next))
   }
 
-  function selectDay(value: string) {
+  function selectDay(value: string, revealMonth = true) {
     if (value < '0001-01-01' || value > '9999-12-31') return
     setSelectedDate(value)
-    setMonth(value.slice(0, 7))
+    if (revealMonth) setMonth(value.slice(0, 7))
+    onDateChange(value)
+    setDateMenu(null)
+  }
+
+  function openDiary(value: string) {
+    const note = notesByDate.get(value)?.[0]
+    if (!note) return
+    selectDay(value)
+    onOpenNote(note)
   }
 
   function openEditor(item?: CalendarItem) {
@@ -237,14 +259,37 @@ export function CalendarView({ notes }: { notes: Note[] }) {
                 const entries = itemsByDate.get(key) ?? []
                 const selected = key === selectedDate
                 const inMonth = key.startsWith(month)
-                const hasDiary = diaryDates.has(key)
+                const diaryCount = notesByDate.get(key)?.length ?? 0
+                const hasDiary = diaryCount > 0
                 return (
-                  <button key={key} type="button" aria-label={`${key}，${entries.length} 个事项${hasDiary ? '，已写日记' : ''}${key === today ? '，今天' : ''}`} aria-pressed={selected} aria-current={key === today ? 'date' : undefined}
-                    onClick={() => selectDay(key)}
+                  <button key={key} type="button" aria-label={`${key}，${entries.length} 个事项${hasDiary ? `，${diaryCount} 篇日记` : ''}${key === today ? '，今天' : ''}`} aria-pressed={selected} aria-haspopup="menu" aria-current={key === today ? 'date' : undefined}
+                    title={hasDiary ? '双击查看当天日记' : undefined}
+                    // Keep adjacent-month cells in place between the two clicks.
+                    onClick={() => selectDay(key, false)}
+                    onDoubleClick={() => openDiary(key)}
+                    onContextMenu={event => {
+                      event.preventDefault()
+                      selectDay(key)
+                      setDateMenu({ date: key, x: event.clientX, y: event.clientY })
+                    }}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' && hasDiary && !event.repeat && !event.nativeEvent.isComposing) {
+                        event.preventDefault()
+                        openDiary(key)
+                        return
+                      }
+                      if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                        event.preventDefault()
+                        const rect = event.currentTarget.getBoundingClientRect()
+                        selectDay(key)
+                        setDateMenu({ date: key, x: rect.left, y: rect.bottom })
+                      }
+                    }}
                     className={`flex min-h-[80px] min-w-0 flex-col overflow-hidden border-b border-r border-[#d4d0c8] p-1 text-left outline-offset-[-4px] focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-[#404040] ${hasDiary ? 'shadow-[inset_0_0_0_2px_#ec4899]' : ''} ${selected ? 'bg-[#e6edf7]' : inMonth ? 'bg-white hover:bg-[#f5f4ec]' : 'bg-[#f2f1ed] text-[#808080]'}`}>
-                    <div className="mb-1 flex w-full items-center justify-between gap-1">
-                      <span className={`inline-flex h-5 min-w-5 items-center justify-center px-0.5 ${key === today ? 'bg-[#000080] font-bold text-white' : selected ? 'font-bold text-[#000080]' : ''}`}>{day}</span>
-                      {entries.length > 0 && <span className="text-[9px] text-[#606060]">{entries.length}项</span>}
+                    <div className="mb-1 flex w-full items-center gap-1">
+                      <span className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center px-0.5 ${key === today ? 'bg-[#000080] font-bold text-white' : selected ? 'font-bold text-[#000080]' : ''}`}>{day}</span>
+                      {hasDiary && <span className="shrink-0 whitespace-nowrap text-[10px] font-bold text-[#b52c70]">日记</span>}
+                      {entries.length > 0 && <span className="ml-auto min-w-0 truncate text-[9px] text-[#606060]">{entries.length}项</span>}
                     </div>
                     <div className="w-full space-y-0.5">
                       {entries.slice(0, 2).map(item => (
@@ -258,10 +303,6 @@ export function CalendarView({ notes }: { notes: Note[] }) {
                 )
               })}
             </div>
-          </div>
-          <div className="flex flex-wrap justify-between gap-1 pt-2 text-[10px] text-[#606060]">
-            <span>粉色描边：已写日记 · 浅蓝底色：选中日期 · 深蓝日期：今天</span>
-            <span>本月 {monthItems.length} 项 · 已完成 {monthItems.filter(item => item.completed).length} 项{filterTagId ? '（已筛选）' : ''}</span>
           </div>
         </section>
 
@@ -390,6 +431,11 @@ export function CalendarView({ notes }: { notes: Note[] }) {
       <div className="min-h-6 shrink-0 border-t border-[#808080] bg-[#d4d0c8] px-2 py-1 text-[10px] text-[#404040]" role="status" aria-live="polite">
         {busy ? '正在保存...' : notice || `共 ${items.length} 个事项 · ${tags.length} 个标签 · 数据保存在本机`}
       </div>
+      {dateMenu && (
+        <ContextMenu x={dateMenu.x} y={dateMenu.y} onClose={() => setDateMenu(null)} items={[
+          { label: '新建当天日记', onClick: () => onCreateDiary(dateMenu.date) },
+        ]} />
+      )}
     </div>
   )
 }
