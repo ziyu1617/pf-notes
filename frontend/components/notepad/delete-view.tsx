@@ -17,8 +17,8 @@ export function DeleteView({ note, onDelete, onCancel }: DeleteViewProps) {
 
   if (!note) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#ece9d8]">
-        <div className="text-center p-4 bg-[#d4d0c8] win-border">
+      <div className="fv-secondary fv-workspace flex-1 flex items-center justify-center bg-[#ece9d8]">
+        <div className="fv-message-card text-center p-4 bg-[#d4d0c8] win-border">
           <div className="text-[12px] mb-4">请先从"所有笔记"中选择要删除的笔记</div>
           <button onClick={onCancel} className="win-button text-[11px] px-4 py-1">
             确定
@@ -45,23 +45,23 @@ export function DeleteView({ note, onDelete, onCancel }: DeleteViewProps) {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-[#ece9d8]" aria-busy={deleting}>
-      <div className="p-4 bg-[#d4d0c8] win-border max-w-md w-full">
+    <div className="fv-secondary fv-workspace flex-1 flex items-center justify-center bg-[#ece9d8]" aria-busy={deleting}>
+      <div className="fv-message-card p-4 bg-[#d4d0c8] win-border max-w-md w-full">
         <div className="text-[12px] font-bold mb-3">确认删除以下笔记：</div>
-        <div className="bg-white p-3 win-inset mb-4">
+        <div className="fv-paper bg-white p-3 win-inset mb-4">
           <div className="text-[12px] font-bold">{note.title}</div>
-          <div className="text-[10px] text-[#404040] mt-1">
+          <div className="fv-muted text-[10px] text-[#404040] mt-1">
             分类: {note.category}
           </div>
-          <div className="text-[11px] mt-2 text-[#404040] max-h-20 overflow-auto">
+          <div className="fv-secondary-text text-[11px] mt-2 text-[#404040] max-h-20 overflow-auto">
             {stripImageMarkdown(note.content).substring(0, 200)}
             {stripImageMarkdown(note.content).length > 200 && '...'}
           </div>
         </div>
-        <div className="text-[11px] text-[#c00000] mb-4">
+        <div className="fv-error text-[11px] text-[#c00000] mb-4">
           删除后将无法恢复！
         </div>
-        {deleteError && <p role="alert" className="text-[11px] text-[#a00000] mb-4">{deleteError}</p>}
+        {deleteError && <p role="alert" className="fv-error text-[11px] text-[#a00000] mb-4">{deleteError}</p>}
         <div className="flex justify-end gap-2">
           <button onClick={onCancel} disabled={deleting} className="win-button text-[11px] px-4 py-1">
             取消

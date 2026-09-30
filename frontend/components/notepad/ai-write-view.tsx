@@ -17,8 +17,8 @@ export function AIWriteView({ note, onUpdateNote, onClose }: AIWriteViewProps) {
 
   if (!note) {
     return (
-      <div className="flex flex-col p-4 bg-[#ece9d8]">
-        <div className="text-center p-4 bg-[#d4d0c8] win-border">
+      <div className="fv-secondary fv-workspace flex flex-col p-4 bg-[#ece9d8]">
+        <div className="fv-message-card text-center p-4 bg-[#d4d0c8] win-border">
           <div className="text-[12px] mb-4">请先从"📋 所有笔记"中选择要进行写作辅助的笔记</div>
           <button onClick={onClose} className="win-button text-[11px] px-4 py-1">
             确定
@@ -52,8 +52,8 @@ export function AIWriteView({ note, onUpdateNote, onClose }: AIWriteViewProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col p-2 gap-2 bg-[#ece9d8] overflow-hidden">
+    <div className="fv-secondary flex-1 flex flex-col overflow-hidden">
+      <div className="fv-workspace flex-1 flex flex-col p-2 gap-2 bg-[#ece9d8] overflow-hidden">
         {/* 指令输入 */}
         <div className="flex gap-2 items-center">
           <label className="text-[11px] whitespace-nowrap">写作指令：</label>
@@ -75,7 +75,7 @@ export function AIWriteView({ note, onUpdateNote, onClose }: AIWriteViewProps) {
         
         {/* 快捷指令 */}
         <div className="flex gap-1 flex-wrap">
-          <span className="text-[10px] text-[#808080]">快捷指令：</span>
+          <span className="fv-muted text-[10px] text-[#808080]">快捷指令：</span>
           {['续写内容', '优化表达', '扩展内容', '添加总结', '修改语气'].map(cmd => (
             <button
               key={cmd}
@@ -92,7 +92,7 @@ export function AIWriteView({ note, onUpdateNote, onClose }: AIWriteViewProps) {
           {/* 当前笔记 */}
           <div className="flex-1 flex flex-col">
             <div className="text-[11px] font-bold mb-1">📄 当前笔记</div>
-            <div className="flex-1 bg-white p-2 win-inset overflow-auto">
+            <div className="fv-paper flex-1 bg-white p-2 win-inset overflow-auto">
               <pre className="text-[11px] font-mono whitespace-pre-wrap">
                 {note.content}
               </pre>
@@ -102,14 +102,14 @@ export function AIWriteView({ note, onUpdateNote, onClose }: AIWriteViewProps) {
           {/* AI 建议 */}
           <div className="flex-1 flex flex-col">
             <div className="text-[11px] font-bold mb-1">✨ AI 建议</div>
-            <div className="flex-1 bg-white p-2 win-inset overflow-auto">
+            <div className="fv-paper flex-1 bg-white p-2 win-inset overflow-auto">
               {!suggestion && !isLoading && (
-                <div className="text-[11px] text-[#808080]">
+                <div className="fv-muted text-[11px] text-[#808080]">
                   输入写作指令后点击生成按钮
                 </div>
               )}
               {isLoading && !suggestion && (
-                <div className="text-[11px] text-[#000080]">
+                <div className="fv-thinking text-[11px] text-[#000080]">
                   ⏳ AI 正在思考...
                 </div>
               )}

@@ -15,8 +15,8 @@ export function AISummaryView({ note, onClose }: AISummaryViewProps) {
 
   if (!note) {
     return (
-      <div className="flex flex-col p-4 bg-[#ece9d8]">
-        <div className="text-center p-4 bg-[#d4d0c8] win-border">
+      <div className="fv-secondary fv-workspace flex flex-col p-4 bg-[#ece9d8]">
+        <div className="fv-message-card text-center p-4 bg-[#d4d0c8] win-border">
           <div className="text-[12px] mb-4">请先从"📋 所有笔记"中选择要总结的笔记</div>
           <button onClick={onClose} className="win-button text-[11px] px-4 py-1">
             确定
@@ -39,12 +39,12 @@ export function AISummaryView({ note, onClose }: AISummaryViewProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 flex gap-2 p-2 bg-[#ece9d8] overflow-hidden">
+    <div className="fv-secondary flex-1 flex flex-col overflow-hidden">
+      <div className="fv-workspace flex-1 flex gap-2 p-2 bg-[#ece9d8] overflow-hidden">
         {/* 原文 */}
         <div className="flex-1 flex flex-col">
           <div className="text-[11px] font-bold mb-1">📄 原文内容</div>
-          <div className="flex-1 bg-white p-2 win-inset overflow-auto">
+          <div className="fv-paper flex-1 bg-white p-2 win-inset overflow-auto">
             <div className="text-[11px] font-bold mb-1">{note.title}</div>
             <pre className="text-[11px] font-mono whitespace-pre-wrap">
               {note.content}
@@ -55,14 +55,14 @@ export function AISummaryView({ note, onClose }: AISummaryViewProps) {
         {/* AI 总结 */}
         <div className="flex-1 flex flex-col">
           <div className="text-[11px] font-bold mb-1">🤖 AI 总结</div>
-          <div className="flex-1 bg-white p-2 win-inset overflow-auto">
+          <div className="fv-paper flex-1 bg-white p-2 win-inset overflow-auto">
             {!summary && !isLoading && (
-              <div className="text-[11px] text-[#808080]">
+              <div className="fv-muted text-[11px] text-[#808080]">
                 点击下方按钮生成 AI 总结
               </div>
             )}
             {isLoading && !summary && (
-              <div className="text-[11px] text-[#000080]">
+              <div className="fv-thinking text-[11px] text-[#000080]">
                 ⏳ 正在生成总结...
               </div>
             )}

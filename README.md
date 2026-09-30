@@ -1,6 +1,6 @@
 # pf Notes · 智能记事本
 
-一个**本地优先**的智能记事本：Python 后端 + Next.js 前端，内置基于LLM的**流式 AI 助手**。既能作为**原生桌面应用**（PyWebView 窗口）运行，也提供**命令行 CLI**。复古 Windows 98 风格界面，所有笔记保存在本地 SQLite，不上传云端。
+一个**本地优先**的智能记事本：Python 后端 + Next.js 前端，内置基于LLM的**流式 AI 助手**。既能作为**原生桌面应用**（PyWebView 窗口）运行，也提供**命令行 CLI**。界面采用 Candyland 配色、半透明面板与圆角，所有笔记保存在本地 SQLite，不上传云端。
 
 ## ✨ 功能
 
@@ -105,6 +105,7 @@ CLI 命令：`new` `list` `dir` `view` `edit` `delete` `search` `summarize` `ass
 
 ## 📝 说明
 
+- 原 Windows 界面保留在 [`backup/windows-ui-20260930`](https://github.com/ziyu1617/pf-notes/tree/backup/windows-ui-20260930) 分支，本地另有源码与构建备份，恢复方法见 [前端版本恢复](docs/frontend-rollback.md)。
 - 前端 `frontend/out`、`frontend/node_modules` 不入库；首次运行由 `desktop.sh` 自动安装并构建
 - 更新源码后，运行 `cd frontend && NEXT_OUTPUT=export npm run build` 重新构建，再重新启动桌面应用使新接口生效
 - 日历与日记日期接口回归测试：在项目根目录运行 `python3 -m unittest discover -s tests -v`（使用临时数据库）

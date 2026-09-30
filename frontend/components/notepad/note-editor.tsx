@@ -183,21 +183,21 @@ export function NoteEditor({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" aria-busy={saving}>
-      <div className="p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
+    <div className="fv-secondary fv-editor flex-1 flex flex-col overflow-hidden" aria-busy={saving}>
+      <div className="fv-section-bar p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
         {diaryDate ? (isEditing ? '编辑日记' : '写日记') : (isEditing ? '编辑笔记' : '新建笔记')}
       </div>
       
-      <fieldset disabled={saving} className="flex-1 min-w-0 flex flex-col p-2 gap-2 border-0 bg-[#ece9d8] overflow-auto">
+      <fieldset disabled={saving} className="fv-workspace flex-1 min-w-0 flex flex-col p-2 gap-2 border-0 bg-[#ece9d8] overflow-auto">
         {diaryDate && (
-          <div className="win-inset bg-[#fff5fa] px-3 py-2 text-[11px] text-[#80405f]">
+          <div className="fv-diary-banner win-inset bg-[#fff5fa] px-3 py-2 text-[11px] text-[#80405f]">
             日记日期：<time dateTime={diaryDate} className="font-bold">{diaryDate}</time>
             <span className="ml-2 text-[10px]">保存后归入这一天</span>
           </div>
         )}
         {/* 标题输入 */}
         <div className="flex items-center gap-2">
-          <label className="text-[11px] w-16">标题：</label>
+          <label className="fv-field-label text-[11px] w-16">标题：</label>
           <input
             type="text"
             value={title}
@@ -209,7 +209,7 @@ export function NoteEditor({
         
         {/* 分类选择 */}
         <div className="flex items-center gap-2">
-          <label className="text-[11px] w-16">分类：</label>
+          <label className="fv-field-label text-[11px] w-16">分类：</label>
           {!showNewCategory ? (
             <>
               <select
@@ -251,7 +251,7 @@ export function NoteEditor({
         {/* 内容编辑 */}
         <div className="flex-1 flex flex-col gap-1 min-h-0">
           <div className="flex items-center gap-2">
-            <label className="text-[11px]">内容：</label>
+            <label className="fv-field-label text-[11px]">内容：</label>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -260,7 +260,7 @@ export function NoteEditor({
             >
               📷 插入图片
             </button>
-            <span className="text-[10px] text-[#606060]">
+            <span className="fv-muted text-[10px] text-[#606060]">
               {uploading ? '图片上传中…' : '可直接粘贴或拖入图片'}
             </span>
             <input
@@ -282,18 +282,18 @@ export function NoteEditor({
             onPaste={handlePaste}
             onDrop={handleDrop}
             onContextMenu={openMenu}
-            className="flex-1 p-2 text-[12px] win-input resize-none font-mono leading-relaxed min-h-[300px]"
+            className="fv-editor-paper flex-1 p-2 text-[12px] win-input resize-none font-mono leading-relaxed min-h-[300px]"
             placeholder="输入笔记内容...（右键可选中/复制/粘贴；图片可直接粘贴或拖入）"
           />
         </div>
         
-        {saveError && <p role="alert" className="text-[11px] text-[#a00000]">{saveError}</p>}
+        {saveError && <p role="alert" className="fv-error text-[11px] text-[#a00000]">{saveError}</p>}
         {/* 操作按钮 */}
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onCancel} className="win-button text-[11px] px-4 py-1">
             取消
           </button>
-          <button onClick={() => { void handleSave() }} disabled={saving || uploading} className="win-button text-[11px] px-4 py-1">
+          <button onClick={() => { void handleSave() }} disabled={saving || uploading} className="fv-primary-action win-button text-[11px] px-4 py-1">
             {saving ? '保存中…' : '保存'}
           </button>
         </div>

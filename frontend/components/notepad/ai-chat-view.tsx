@@ -138,23 +138,23 @@ export function AIChatView({ note, onClose, onSelectNote, embedded = false }: AI
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 flex gap-2 p-2 bg-[#ece9d8] overflow-hidden">
+    <div className="fv-secondary fv-chat flex-1 flex flex-col overflow-hidden">
+      <div className="fv-workspace flex-1 flex gap-2 p-2 bg-[#ece9d8] overflow-hidden">
         {/* 笔记预览（嵌入分栏时隐藏，笔记已在左侧显示） */}
         {!embedded && (
           <div className="w-64 flex flex-col shrink-0">
             <div className="text-[11px] font-bold mb-1">当前笔记</div>
-            <div className="flex-1 bg-white p-2 win-inset overflow-auto">
+            <div className="fv-paper flex-1 bg-white p-2 win-inset overflow-auto">
               {note ? (
                 <>
                   <div className="text-[11px] font-bold mb-1">{note.title}</div>
-                  <div className="text-[10px] text-[#808080] mb-2">[{note.category}]</div>
+                  <div className="fv-muted text-[10px] text-[#808080] mb-2">[{note.category}]</div>
                   <pre className="text-[10px] font-mono whitespace-pre-wrap">
                     {note.content}
                   </pre>
                 </>
               ) : (
-                <div className="text-[11px] text-[#808080]">
+                <div className="fv-muted text-[11px] text-[#808080]">
                   <p className="mb-2">未选择笔记</p>
                   {onSelectNote && (
                     <button
@@ -172,7 +172,7 @@ export function AIChatView({ note, onClose, onSelectNote, embedded = false }: AI
 
         {/* 对话区域 */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center justify-between mb-1">
+          <div className="fv-chat-heading flex items-center justify-between mb-1">
             <span className="text-[11px] font-bold">对话{note && '（已保存到此笔记）'}</span>
             {note && messages.length > 0 && (
               <button
@@ -184,31 +184,31 @@ export function AIChatView({ note, onClose, onSelectNote, embedded = false }: AI
               </button>
             )}
           </div>
-          <div className="flex-1 bg-white win-inset overflow-auto p-2">
+          <div className="fv-chat-surface flex-1 bg-white win-inset overflow-auto p-2">
             {messages.length === 0 && (
-              <div className="text-[11px] text-[#808080] p-2">
+              <div className="fv-muted text-[11px] text-[#808080] p-2">
                 开始与 AI 对话吧！{note ? '您可以问关于当前笔记的任何问题。' : '建议先选择一条笔记再开始对话。'}
               </div>
             )}
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`mb-2 p-2 text-[11px] ${
+                className={`fv-chat-bubble mb-2 p-2 text-[11px] ${
                   msg.role === 'user' 
-                    ? 'bg-[#ece9d8] ml-8' 
-                    : 'bg-[#e0f0ff] mr-8'
+                    ? 'fv-bubble-user bg-[#ece9d8] ml-8'
+                    : 'fv-bubble-assistant bg-[#e0f0ff] mr-8'
                 }`}
               >
-                <div className="text-[10px] font-bold mb-1">
+                <div className="fv-chat-author text-[10px] font-bold mb-1">
                   {msg.role === 'user' ? '您' : 'AI'}
                 </div>
                 <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
               </div>
             ))}
             {isLoading && messages[messages.length - 1]?.role === 'user' && (
-              <div className="mb-2 p-2 text-[11px] bg-[#e0f0ff] mr-8">
-                <div className="text-[10px] font-bold mb-1">AI</div>
-                <span className="text-[#000080]">正在思考...</span>
+              <div className="fv-chat-bubble fv-bubble-assistant mb-2 p-2 text-[11px] bg-[#e0f0ff] mr-8">
+                <div className="fv-chat-author text-[10px] font-bold mb-1">AI</div>
+                <span className="fv-thinking text-[#000080]">正在思考...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -228,7 +228,7 @@ export function AIChatView({ note, onClose, onSelectNote, embedded = false }: AI
             <button 
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
-              className="win-button text-[11px] px-4"
+              className="fv-primary-action win-button text-[11px] px-4"
             >
               发送
             </button>

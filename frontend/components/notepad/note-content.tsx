@@ -28,14 +28,14 @@ export function NoteContent({ content }: NoteContentProps) {
   }
 
   return (
-    <div className="text-[12px] font-mono whitespace-pre-wrap leading-relaxed break-words">
+    <div className="fv-note-content text-[12px] font-mono whitespace-pre-wrap leading-relaxed break-words">
       {parts.map((part, i) =>
         part.type === 'image' ? (
           <img
             key={i}
             src={part.src}
             alt={part.alt}
-            className="my-2 max-w-full h-auto win-border bg-white"
+            className="fv-note-image my-2 max-w-full h-auto win-border bg-white"
           />
         ) : (
           <span key={i}>{part.value}</span>

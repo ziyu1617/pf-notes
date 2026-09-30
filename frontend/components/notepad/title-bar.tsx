@@ -10,8 +10,7 @@ interface TitleBarProps {
 export function TitleBar({ title, onClose }: TitleBarProps) {
   return (
     <div 
-      className="h-7 flex items-center justify-between px-1 text-white select-none"
-      style={{ background: 'linear-gradient(90deg, #000080, #1084d0)' }}
+      className="glass-titlebar h-7 flex items-center justify-between px-1 text-white select-none"
     >
       <div className="flex items-center gap-2 px-1">
         <span className="text-[11px] font-bold tracking-tight">{title}</span>

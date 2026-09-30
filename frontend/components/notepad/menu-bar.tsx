@@ -14,13 +14,12 @@ const menuItems = [
 
 export function MenuBar({ onAction, currentView }: MenuBarProps) {
   return (
-    <div className="flex flex-wrap gap-1 p-1 bg-[#d4d0c8] border-b border-[#808080]">
+    <div className="glass-navigation flex flex-wrap gap-1 p-1 bg-[#d4d0c8] border-b border-[#808080]">
       {menuItems.map((item) => (
         <button
           key={item.key}
           onClick={() => onAction(item.action)}
           aria-current={currentView === item.action ? 'page' : undefined}
-          style={currentView === item.action ? { backgroundColor: '#000080', color: '#ffffff' } : undefined}
           className={`win-button text-[11px] px-2 py-0.5 whitespace-nowrap ${
             currentView === item.action ? 'bg-[#000080] text-white' : ''
           }`}

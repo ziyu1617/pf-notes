@@ -82,12 +82,12 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
       role="menu"
       aria-label="快捷操作"
       style={{ top: pos.y, left: pos.x }}
-      className="fixed z-[100] min-w-[150px] bg-[#d4d0c8] win-border py-0.5 text-[11px] select-none"
+      className="fv-context-menu fixed z-[100] min-w-[150px] bg-[#d4d0c8] win-border py-0.5 text-[11px] select-none"
       onContextMenu={(e) => e.preventDefault()}
     >
       {items.map((item, i) =>
         item === 'separator' ? (
-          <div key={i} role="separator" className="my-0.5 mx-0.5 h-px bg-[#808080]" />
+          <div key={i} role="separator" className="fv-divider my-0.5 mx-0.5 h-px bg-[#808080]" />
         ) : (
           <button
             key={i}
@@ -97,7 +97,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
               item.onClick()
               onClose()
             }}
-            className="flex w-full items-center justify-between gap-6 px-3 py-1 text-left text-black hover:bg-[#000080] hover:text-white disabled:text-[#a0a0a0] disabled:hover:bg-transparent disabled:hover:text-[#a0a0a0]"
+            className="fv-context-action flex w-full items-center justify-between gap-6 px-3 py-1 text-left text-black hover:bg-[#000080] hover:text-white disabled:text-[#a0a0a0] disabled:hover:bg-transparent disabled:hover:text-[#a0a0a0]"
           >
             <span>{item.label}</span>
             {item.shortcut && <span className="opacity-70">{item.shortcut}</span>}

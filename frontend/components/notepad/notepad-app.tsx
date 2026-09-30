@@ -151,7 +151,7 @@ export function NotepadApp() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#008080] flex items-center justify-center">
+      <div className="glass-desktop min-h-screen bg-[#008080] flex items-center justify-center">
         <div className="bg-[#d4d0c8] p-4 win-border text-[12px]">
           正在加载...
         </div>
@@ -160,11 +160,11 @@ export function NotepadApp() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#008080] flex flex-col overflow-hidden">
+    <div className="glass-desktop h-screen w-screen bg-[#008080] flex flex-col overflow-hidden">
       {/* 主窗口 - 铺满整个原生窗口 */}
       <div
         ref={windowRef}
-        className="bg-[#d4d0c8] flex flex-col win-border relative select-none flex-1 min-h-0"
+        className="glass-window bg-[#d4d0c8] flex flex-col win-border relative select-none flex-1 min-h-0"
       >
 
         {/* 标题栏 */}
@@ -256,7 +256,7 @@ export function NotepadApp() {
         </div>
         
         {/* 底部状态栏 */}
-        <div className="h-6 bg-[#d4d0c8] border-t border-[#808080] flex items-center px-2 text-[10px] shrink-0">
+        <div className="glass-statusbar h-6 bg-[#d4d0c8] border-t border-[#808080] flex items-center px-2 text-[10px] shrink-0">
           <div className="flex-1 win-inset px-2 py-0.5 mr-1">
             笔记总数: {notes.length} | 分类: {categories.length}
           </div>

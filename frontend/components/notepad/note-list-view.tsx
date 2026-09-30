@@ -28,9 +28,9 @@ export function NoteListView({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="fv-secondary fv-note-list flex-1 flex flex-col overflow-hidden">
       {/* 表头 */}
-      <div className="flex bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
+      <div className="fv-section-bar flex bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
         <div className="w-12 p-1 border-r border-[#808080] text-center">#</div>
         <div className="flex-1 p-1 border-r border-[#808080]">标题</div>
         <div className="w-20 p-1 border-r border-[#808080]">分类</div>
@@ -39,9 +39,9 @@ export function NoteListView({
       </div>
       
       {/* 列表内容 */}
-      <div className="flex-1 bg-white win-inset overflow-auto">
+      <div className="fv-paper flex-1 bg-white win-inset overflow-auto">
         {notes.length === 0 ? (
-          <div className="p-4 text-center text-[11px] text-[#808080]">
+          <div className="fv-muted p-4 text-center text-[11px] text-[#808080]">
             暂无笔记，请点击 [3] 新建笔记 创建
           </div>
         ) : (
@@ -50,9 +50,9 @@ export function NoteListView({
               key={note.id}
               onClick={() => onSelectNote(note)}
               onDoubleClick={() => onViewNote(note)}
-              className={`flex text-[11px] border-b border-[#d4d0c8] cursor-pointer ${
+              className={`fv-list-row flex text-[11px] border-b border-[#d4d0c8] cursor-pointer ${
                 selectedNote?.id === note.id 
-                  ? 'bg-[#000080] text-white' 
+                  ? 'fv-is-selected bg-[#000080] text-white'
                   : 'hover:bg-[#ece9d8]'
               }`}
             >
@@ -104,7 +104,7 @@ export function NoteListView({
       </div>
       
       {/* 状态栏 */}
-      <div className="p-1 bg-[#d4d0c8] border-t border-[#808080] text-[10px]">
+      <div className="fv-statusbar p-1 bg-[#d4d0c8] border-t border-[#808080] text-[10px]">
         {selectedNote 
           ? `已选择: ${selectedNote.title} | 双击打开查看`
           : '单击选择笔记，双击打开查看'}

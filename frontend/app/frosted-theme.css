@@ -1,0 +1,316 @@
+/* Visual-only skin. Candyland colors; original structure and glass treatment. */
+.frosted-theme {
+  color-scheme: light;
+  /* https://github.com/jnsahaj/tweakcn/blob/main/utils/theme-presets.ts */
+  --candy-primary-rgb: 255, 192, 203;
+  --candy-secondary-rgb: 135, 206, 235;
+  --candy-accent-rgb: 255, 255, 0;
+  --candy-muted-rgb: 221, 217, 196;
+  --glass-text: #333333;
+  --glass-muted: #6e6e6e;
+  --glass-accent: #333333;
+  --glass-surface: rgba(255, 255, 255, 0.38);
+  --glass-raised: rgba(255, 255, 255, 0.7);
+  --glass-line: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 8px 24px rgba(42, 58, 76, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.44);
+  --background: #f7f9fa;
+  --foreground: var(--glass-text);
+  --card: #ffffff;
+  --card-foreground: #333333;
+  --popover: #ffffff;
+  --popover-foreground: #333333;
+  --primary: #ffc0cb;
+  --primary-foreground: #000000;
+  --secondary: #87ceeb;
+  --secondary-foreground: #000000;
+  --accent: #ffff00;
+  --accent-foreground: #000000;
+  --muted: #ddd9c4;
+  --muted-foreground: #6e6e6e;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #d4d4d4;
+  --input: #d4d4d4;
+  --ring: #ffc0cb;
+  background: var(--background);
+}
+
+.frosted-theme body {
+  color: var(--glass-text);
+  background: var(--background);
+}
+
+/* Broad, already-soft pools of light avoid animated full-screen blur layers. */
+.frosted-theme .glass-desktop {
+  background:
+    radial-gradient(ellipse at 5% 4%, rgba(247, 249, 250, 0.98), transparent 48%),
+    radial-gradient(ellipse at 93% 9%, rgba(var(--candy-primary-rgb), 0.9), transparent 49%),
+    radial-gradient(ellipse at 76% 97%, rgba(255, 255, 221, 0.82), transparent 56%),
+    radial-gradient(ellipse at 3% 82%, rgba(var(--candy-secondary-rgb), 0.74), transparent 49%),
+    linear-gradient(130deg, #f7f9fa, #ffecf0 55%, #f7f9fa);
+  color: var(--glass-text);
+}
+
+/* Keep fixed menus in viewport coordinates: no filter/transform on ancestors. */
+.frosted-theme .glass-window {
+  background-color: rgba(255, 255, 255, 0.16);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Cpath fill='%23fff' opacity='.045' filter='url(%23n)' d='M0 0h180v180H0z'/%3E%3C/svg%3E");
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+/* Recolor the old palette without changing utility classes or box geometry. */
+.frosted-theme [class~="bg-[#ece9d8]"] { background-color: rgba(255, 255, 255, 0.14); }
+.frosted-theme [class~="bg-[#d4d0c8]"] { background-color: rgba(255, 255, 255, 0.28); }
+.frosted-theme [class~="bg-white"] { background-color: var(--glass-raised); }
+.frosted-theme [class~="bg-[#f8f8f4]"] { background-color: rgba(255, 255, 255, 0.5); }
+.frosted-theme [class~="bg-[#f2f1ed]"] { background-color: rgba(221, 217, 196, 0.22); }
+.frosted-theme [class~="bg-[#808080]"] { background-color: rgba(110, 110, 110, 0.13); }
+.frosted-theme [class~="bg-[#e6edf7]"],
+.frosted-theme [class~="bg-[#e0f0ff]"] { background-color: rgba(var(--candy-secondary-rgb), 0.52); }
+.frosted-theme [class~="bg-[#000080]"] { background-color: var(--primary); color: var(--primary-foreground); }
+.frosted-theme [class~="bg-[#ffe6f0]"],
+.frosted-theme [class~="bg-[#fff5fa]"] { background-color: rgba(var(--candy-primary-rgb), 0.68); }
+.frosted-theme [class~="bg-[#fff1ef]"] { background-color: rgba(255, 237, 234, 0.84); }
+.frosted-theme [class~="bg-[#fff4db]"] { background-color: rgba(255, 255, 221, 0.82); }
+.frosted-theme [class~="text-black"],
+.frosted-theme [class~="text-[#303030]"],
+.frosted-theme [class~="text-[#404040]"] { color: var(--glass-text); }
+.frosted-theme [class~="text-[#606060]"],
+.frosted-theme [class~="text-[#808080]"],
+.frosted-theme [class~="text-[#a0a0a0]"] { color: var(--glass-muted); }
+.frosted-theme [class~="text-[#000080]"] { color: var(--glass-accent); }
+.frosted-theme [class~="text-[#a04000]"] { color: #776a35; }
+.frosted-theme [class~="text-[#80405f]"],
+.frosted-theme [class~="text-[#c2185b]"] { color: #87445d; }
+.frosted-theme [class~="text-[#b52c70]"] { color: #a03f6d; }
+.frosted-theme [class~="text-[#a00000]"],
+.frosted-theme [class~="text-[#c00000]"] { color: #a13e49; }
+.frosted-theme [class~="border-[#808080]"],
+.frosted-theme [class~="border-[#d4d0c8]"] { border-color: rgba(255, 255, 255, 0.46); }
+.frosted-theme [class~="border-[#000080]"] { border-color: #87ceeb; }
+.frosted-theme [class~="border-[#c00000]"] { border-color: rgba(161, 62, 73, 0.3); }
+
+.frosted-theme .win-button {
+  color: var(--glass-text);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.38));
+  border-radius: 8px;
+  box-shadow: 0 3px 9px rgba(49, 68, 86, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.48);
+  transition: background-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
+}
+
+.frosted-theme .win-button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 5px 15px rgba(49, 68, 86, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.95);
+}
+
+.frosted-theme .win-button:active:not(:disabled) {
+  background: rgba(var(--candy-primary-rgb), 0.86);
+  box-shadow: inset 0 2px 4px rgba(53, 74, 91, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
+.frosted-theme .win-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.frosted-theme .win-button[class~="text-[#a00000]"] { color: #a13e49; }
+
+.frosted-theme .win-input {
+  color: var(--glass-text);
+  background: rgba(255, 255, 255, 0.63);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 3px rgba(58, 80, 98, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+.frosted-theme .win-input::placeholder { color: #6e6e6e; }
+.frosted-theme .win-input:focus {
+  background-color: rgba(255, 255, 255, 0.86);
+  box-shadow: inset 0 0 0 1px #bd6984, 0 0 0 3px rgba(var(--candy-primary-rgb), 0.12);
+}
+.frosted-theme select option { background: #f7f9fa; color: var(--glass-text); }
+.frosted-theme input[type="checkbox"] { accent-color: #b44d7c; }
+.frosted-theme :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid #a03f6d;
+  outline-offset: 2px;
+}
+
+.frosted-theme .win-border {
+  border-radius: 12px;
+  box-shadow: var(--glass-shadow);
+}
+.frosted-theme .win-inset {
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 4px 16px rgba(58, 75, 95, 0.05);
+}
+
+.frosted-theme .glass-window.glass-window {
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+.frosted-theme .glass-titlebar {
+  color: #333333;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.12));
+  border-radius: 16px 16px 0 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+.frosted-theme .glass-titlebar .win-button {
+  color: #6e6e6e;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+}
+.frosted-theme .glass-titlebar .win-button:hover { color: #a54e63; background: #fbeaf0; }
+.frosted-theme .glass-navigation {
+  background: rgba(255, 255, 255, 0.17);
+  border-color: rgba(255, 255, 255, 0.48);
+  box-shadow: 0 4px 16px rgba(45, 62, 79, 0.025);
+}
+.frosted-theme .glass-navigation .win-button[aria-current="page"] {
+  color: var(--primary-foreground);
+  background: linear-gradient(145deg, #ffd5de, var(--primary));
+  box-shadow: 0 4px 12px rgba(141, 80, 103, 0.19), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.frosted-theme .glass-statusbar {
+  color: var(--glass-muted);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.55);
+  border-radius: 0 0 16px 16px;
+}
+.frosted-theme .glass-statusbar .win-inset {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 5px;
+}
+
+.frosted-theme .glass-calendar { background: transparent; }
+.frosted-theme .glass-calendar-toolbar {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.42);
+}
+.frosted-theme .glass-month-label { color: #333333; }
+.frosted-theme .glass-calendar-sheet {
+  background: rgba(255, 255, 255, 0.27);
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(48px) saturate(1.06);
+  backdrop-filter: blur(48px) saturate(1.06);
+}
+.frosted-theme .glass-weekdays {
+  color: #6e6e6e;
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.5);
+  border-radius: 12px 12px 0 0;
+}
+.frosted-theme .glass-day {
+  background: rgba(255, 255, 255, 0.36);
+  border-color: rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: background-color 200ms ease, box-shadow 200ms ease;
+}
+.frosted-theme .glass-day[class~="bg-[#f2f1ed]"] { background: rgba(var(--candy-muted-rgb), 0.16); }
+.frosted-theme .glass-day:hover { background: rgba(255, 255, 255, 0.72); }
+.frosted-theme .glass-day[aria-pressed="true"] {
+  background: linear-gradient(145deg, rgba(220, 242, 251, 0.83), rgba(var(--candy-secondary-rgb), 0.66));
+  box-shadow: inset 0 0 0 1px rgba(var(--candy-secondary-rgb), 0.45);
+}
+.frosted-theme .glass-day.glass-day-diary {
+  box-shadow: inset 0 0 0 2px rgba(221, 98, 155, 0.78), inset 0 3px 12px rgba(var(--candy-primary-rgb), 0.12);
+}
+.frosted-theme .glass-day:focus-visible { outline-offset: -4px; }
+.frosted-theme .glass-day-number { border-radius: 6px; }
+.frosted-theme .glass-day[aria-current="date"] .glass-day-number {
+  color: var(--primary-foreground);
+  background: linear-gradient(145deg, #ffd5de, var(--primary));
+  box-shadow: 0 2px 5px rgba(141, 80, 103, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.frosted-theme .glass-calendar-entry {
+  color: #333333;
+  background: rgba(255, 243, 247, 0.8);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.frosted-theme .glass-calendar-entry.line-through {
+  color: #555555;
+  background: rgba(var(--candy-muted-rgb), 0.76);
+  text-decoration-color: #6e6e6e;
+}
+.frosted-theme .glass-day-panel {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.1));
+  border-color: rgba(255, 255, 255, 0.56);
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+}
+.frosted-theme .glass-task-card {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.77), rgba(255, 255, 255, 0.38));
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+}
+.frosted-theme .glass-tag { border-radius: 6px; }
+.frosted-theme .glass-tag > span:first-child { border-radius: 50%; }
+.frosted-theme .glass-calendar-status {
+  color: var(--glass-muted);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Retain the original 16px scrollbar track to avoid shifting content. */
+.frosted-theme ::-webkit-scrollbar { width: 16px; height: 16px; }
+.frosted-theme ::-webkit-scrollbar-track { background: rgba(247, 249, 250, 0.2); }
+.frosted-theme ::-webkit-scrollbar-thumb {
+  background: rgba(154, 92, 116, 0.35);
+  background-clip: padding-box;
+  border: 5px solid transparent;
+  border-radius: 16px;
+  box-shadow: none;
+}
+.frosted-theme ::-webkit-scrollbar-thumb:hover { background-color: rgba(154, 92, 116, 0.56); }
+.frosted-theme ::-webkit-scrollbar-button { background: transparent; box-shadow: none; }
+.frosted-theme ::selection { background: #ffc0cb; color: #000000; }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .frosted-theme .glass-calendar-sheet,
+  .frosted-theme .glass-day-panel { background: rgba(247, 249, 250, 0.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frosted-theme *, .frosted-theme *::before, .frosted-theme *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .frosted-theme {
+    --glass-text: #222222;
+    --glass-muted: #505050;
+    --glass-surface: #f7f9fa;
+    --glass-raised: #ffffff;
+  }
+  .frosted-theme .glass-day { border-color: #aaaaaa; background-color: #f7f9fa; }
+  .frosted-theme .glass-day.glass-day-diary { box-shadow: inset 0 0 0 2px #b6407b; }
+}
+
+/* Preserve the original hierarchy at readable desktop sizes, without zooming
+   the interface or changing component positions, spacing or breakpoints. */
+.frosted-theme [class~="text-[9px]"],
+.frosted-theme [class~="text-[10px]"] { font-size: 12px; }
+.frosted-theme [class~="text-[11px]"],
+.frosted-theme [class~="text-xs"] { font-size: 14px; }
+.frosted-theme [class~="text-[12px]"],
+.frosted-theme [class~="text-sm"] { font-size: 16px; }
+.frosted-theme [class~="text-[14px]"] { font-size: 18px; }
+.frosted-theme .win-button { font-size: 14px; }
+.frosted-theme .glass-day-number { line-height: 20px; }
+.frosted-theme .glass-titlebar .win-button { font-size: 12px; line-height: 20px; }
+.frosted-theme .fv-note-content,
+.frosted-theme .fv-chat-bubble { font-size: 16px; }
+.frosted-theme .glass-statusbar { white-space: nowrap; }
+.frosted-theme .glass-statusbar > div {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -124,10 +124,10 @@ export function StrawberryChatView() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col p-2 bg-[#ece9d8] overflow-hidden">
+    <div className="fv-secondary fv-chat fv-berry-chat flex-1 flex flex-col overflow-hidden">
+      <div className="fv-workspace flex-1 flex flex-col p-2 bg-[#ece9d8] overflow-hidden">
         {/* 标题 + 清空 */}
-        <div className="flex items-center justify-between mb-1">
+        <div className="fv-chat-heading flex items-center justify-between mb-1">
           <span className="text-[11px] font-bold">🍓 和草莓聊聊（对话会自动保存）</span>
           {messages.length > 0 && (
             <button
@@ -141,31 +141,31 @@ export function StrawberryChatView() {
         </div>
 
         {/* 对话区 */}
-        <div className="flex-1 bg-white win-inset overflow-auto p-2">
+        <div className="fv-chat-surface flex-1 bg-white win-inset overflow-auto p-2">
           {messages.length === 0 && (
-            <div className="text-[11px] text-[#808080] p-2">
+            <div className="fv-muted text-[11px] text-[#808080] p-2">
               嗨，我是草莓🍓 有什么开心的或者不开心的，都可以跟我说说，我都在听呀～
             </div>
           )}
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`mb-2 p-2 text-[11px] ${
+              className={`fv-chat-bubble mb-2 p-2 text-[11px] ${
                 msg.role === 'user'
-                  ? 'bg-[#ece9d8] ml-8'
-                  : 'bg-[#ffe6f0] mr-8'
+                  ? 'fv-bubble-user bg-[#ece9d8] ml-8'
+                  : 'fv-bubble-assistant fv-bubble-berry bg-[#ffe6f0] mr-8'
               }`}
             >
-              <div className="text-[10px] font-bold mb-1">
+              <div className="fv-chat-author text-[10px] font-bold mb-1">
                 {msg.role === 'user' ? '您' : '🍓 草莓'}
               </div>
               <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
             </div>
           ))}
           {isLoading && messages[messages.length - 1]?.role === 'user' && (
-            <div className="mb-2 p-2 text-[11px] bg-[#ffe6f0] mr-8">
-              <div className="text-[10px] font-bold mb-1">🍓 草莓</div>
-              <span className="text-[#c2185b]">正在认真听你说...</span>
+            <div className="fv-chat-bubble fv-bubble-assistant fv-bubble-berry mb-2 p-2 text-[11px] bg-[#ffe6f0] mr-8">
+              <div className="fv-chat-author text-[10px] font-bold mb-1">🍓 草莓</div>
+              <span className="fv-thinking text-[#c2185b]">正在认真听你说...</span>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -185,7 +185,7 @@ export function StrawberryChatView() {
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="win-button text-[11px] px-4"
+            className="fv-primary-action win-button text-[11px] px-4"
           >
             发送
           </button>

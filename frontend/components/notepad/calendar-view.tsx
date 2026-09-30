@@ -30,7 +30,7 @@ function dateLabel(value: string) {
 
 function TagBadge({ tag }: { tag: CalendarTag }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1 border border-[#d4d0c8] bg-[#f8f8f4] px-1.5 py-0.5 text-[10px] text-[#404040]">
+    <span className="glass-tag inline-flex max-w-full items-center gap-1 border border-[#d4d0c8] bg-[#f8f8f4] px-1.5 py-0.5 text-[10px] text-[#404040]">
       <span className="h-2 w-2 shrink-0" style={{ backgroundColor: tag.color }} />
       <span className="truncate">{tag.name}</span>
     </span>
@@ -225,10 +225,10 @@ export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, 
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[#ece9d8] text-[12px]">
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#808080] p-2">
+    <div className="glass-calendar flex min-h-0 flex-1 flex-col bg-[#ece9d8] text-[12px]">
+      <div className="glass-calendar-toolbar flex flex-wrap items-center gap-2 border-b border-[#808080] p-2">
         <button className="win-button" aria-label="上个月" onClick={() => moveMonth(-1)}>◀</button>
-        <span className="min-w-28 text-center font-bold">{parseDate(`${month}-01`).getFullYear()} 年 {Number(month.slice(5))} 月</span>
+        <span className="glass-month-label min-w-28 text-center font-bold">{parseDate(`${month}-01`).getFullYear()} 年 {Number(month.slice(5))} 月</span>
         <button className="win-button" aria-label="下个月" onClick={() => moveMonth(1)}>▶</button>
         <button className="win-button" onClick={() => selectDay(dateKey(new Date()))}>今天</button>
         <label className="ml-auto flex items-center gap-1 text-[11px]">
@@ -250,8 +250,8 @@ export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, 
 
       <div className="flex min-h-0 flex-1 flex-col overflow-auto lg:flex-row">
         <section className="min-w-0 shrink-0 p-2 lg:flex lg:flex-1 lg:flex-col lg:overflow-auto" aria-label="月历">
-          <div className="win-inset bg-white p-0.5 lg:flex lg:min-h-[450px] lg:flex-1 lg:flex-col">
-            <div className="grid grid-cols-7 border-b border-[#808080] bg-[#d4d0c8]">
+          <div className="glass-calendar-sheet win-inset bg-white p-0.5 lg:flex lg:min-h-[450px] lg:flex-1 lg:flex-col">
+            <div className="glass-weekdays grid grid-cols-7 border-b border-[#808080] bg-[#d4d0c8]">
               {WEEKDAYS.map((day, index) => <div key={day} className={`py-1.5 text-center text-[11px] font-bold ${index > 4 ? 'text-[#a04000]' : ''}`}>周{day}</div>)}
             </div>
             <div className="grid flex-1 grid-cols-7 auto-rows-fr">
@@ -285,15 +285,15 @@ export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, 
                         setDateMenu({ date: key, x: rect.left, y: rect.bottom })
                       }
                     }}
-                    className={`flex min-h-[80px] min-w-0 flex-col overflow-hidden border-b border-r border-[#d4d0c8] p-1 text-left outline-offset-[-4px] focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-[#404040] ${hasDiary ? 'shadow-[inset_0_0_0_2px_#ec4899]' : ''} ${selected ? 'bg-[#e6edf7]' : inMonth ? 'bg-white hover:bg-[#f5f4ec]' : 'bg-[#f2f1ed] text-[#808080]'}`}>
+                    className={`glass-day flex min-h-[80px] min-w-0 flex-col overflow-hidden border-b border-r border-[#d4d0c8] p-1 text-left outline-offset-[-4px] focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-[#404040] ${hasDiary ? 'glass-day-diary shadow-[inset_0_0_0_2px_#ec4899]' : ''} ${selected ? 'bg-[#e6edf7]' : inMonth ? 'bg-white hover:bg-[#f5f4ec]' : 'bg-[#f2f1ed] text-[#808080]'}`}>
                     <div className="mb-1 flex w-full items-center gap-1">
-                      <span className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center px-0.5 ${key === today ? 'bg-[#000080] font-bold text-white' : selected ? 'font-bold text-[#000080]' : ''}`}>{day}</span>
+                      <span className={`glass-day-number inline-flex h-5 min-w-5 shrink-0 items-center justify-center px-0.5 ${key === today ? 'bg-[#000080] font-bold text-white' : selected ? 'font-bold text-[#000080]' : ''}`}>{day}</span>
                       {hasDiary && <span className="shrink-0 whitespace-nowrap text-[10px] font-bold text-[#b52c70]">日记</span>}
                       {entries.length > 0 && <span className="ml-auto min-w-0 truncate text-[9px] text-[#606060]">{entries.length}项</span>}
                     </div>
                     <div className="w-full space-y-0.5">
                       {entries.slice(0, 2).map(item => (
-                        <div key={item.id} className={`truncate border-l-2 bg-[#ece9d8] px-1 py-0.5 text-[10px] text-[#303030] ${item.completed ? 'line-through' : ''}`} style={{ borderLeftColor: tagMap.get(item.tagIds[0])?.color ?? '#808080' }}>
+                        <div key={item.id} className={`glass-calendar-entry truncate border-l-2 bg-[#ece9d8] px-1 py-0.5 text-[10px] text-[#303030] ${item.completed ? 'line-through' : ''}`} style={{ borderLeftColor: tagMap.get(item.tagIds[0])?.color ?? '#808080' }}>
                           {item.completed ? '✓ ' : item.time ? `${item.time} ` : ''}{item.title}
                         </div>
                       ))}
@@ -306,7 +306,7 @@ export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, 
           </div>
         </section>
 
-        <aside className="min-w-0 shrink-0 space-y-3 border-t border-[#808080] p-3 lg:w-[340px] lg:overflow-auto lg:border-l lg:border-t-0" aria-label="当日事项">
+        <aside className="glass-day-panel min-w-0 shrink-0 space-y-3 border-t border-[#808080] p-3 lg:w-[340px] lg:overflow-auto lg:border-l lg:border-t-0" aria-label="当日事项">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="font-bold">{dateLabel(selectedDate)}</h2>
@@ -409,7 +409,7 @@ export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, 
                 <p className="mt-1 text-[10px]">{error ? '请重新加载后再试。' : '点击「添加事项」，记下接下来的计划。'}</p>
               </div>
             ) : dayItems.map(item => (
-              <article key={item.id} className="win-inset space-y-2 bg-white p-3">
+              <article key={item.id} className="glass-task-card win-inset space-y-2 bg-white p-3">
                 <div className="flex items-start gap-2">
                   <input type="checkbox" className="mt-0.5" checked={item.completed} disabled={busy} aria-label={`${item.completed ? '标记未完成' : '完成事项'}：${item.title}`} onChange={() => { void runAction(async () => { await updateItem(item.id, { completed: !item.completed }); setNotice(item.completed ? '已标记为未完成' : '事项已完成') }) }} />
                   <div className="min-w-0 flex-1">
@@ -428,7 +428,7 @@ export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, 
           </div>
         </aside>
       </div>
-      <div className="min-h-6 shrink-0 border-t border-[#808080] bg-[#d4d0c8] px-2 py-1 text-[10px] text-[#404040]" role="status" aria-live="polite">
+      <div className="glass-calendar-status min-h-6 shrink-0 border-t border-[#808080] bg-[#d4d0c8] px-2 py-1 text-[10px] text-[#404040]" role="status" aria-live="polite">
         {busy ? '正在保存...' : notice || `共 ${items.length} 个事项 · ${tags.length} 个标签 · 数据保存在本机`}
       </div>
       {dateMenu && (
