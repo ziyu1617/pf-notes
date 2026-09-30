@@ -221,14 +221,14 @@ export function AIChatView({ note, onClose, onSelectNote, embedded = false }: AI
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 p-1 text-[12px] win-input"
+              className="min-w-0 flex-1 p-1 text-[12px] win-input"
               placeholder="输入您的问题..."
               disabled={isLoading}
             />
             <button 
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
-              className="fv-primary-action win-button text-[11px] px-4"
+              className="fv-primary-action win-button shrink-0 text-[11px] px-4"
             >
               发送
             </button>

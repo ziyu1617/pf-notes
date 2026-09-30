@@ -11,7 +11,7 @@ interface NoteViewerProps {
   note: Note
   onEdit: () => void
   onDelete?: () => void
-  onBack: () => void
+  onBack?: () => void
   backLabel?: string
 }
 
@@ -63,13 +63,17 @@ export function NoteViewer({ note, onEdit, onDelete, onBack, backLabel = '返回
   }
 
   return (
-    <div className="fv-secondary fv-viewer flex-1 flex flex-col overflow-hidden">
+    <div className="fv-secondary fv-viewer min-w-0 min-h-0 flex-1 flex flex-col overflow-hidden">
       {/* 工具栏 */}
-      <div className="fv-toolbar p-2 bg-[#d4d0c8] border-b border-[#808080] flex items-center gap-2">
-        <button onClick={onBack} className="win-button text-[10px] px-2">
-          {backLabel}
-        </button>
-        <div className="fv-divider w-px h-4 bg-[#808080]" />
+      <div className="fv-toolbar p-2 bg-[#d4d0c8] border-b border-[#808080] flex flex-wrap items-center gap-2">
+        {onBack && (
+          <>
+            <button onClick={onBack} className="win-button text-[10px] px-2">
+              {backLabel}
+            </button>
+            <div className="fv-divider w-px h-4 bg-[#808080]" />
+          </>
+        )}
         <button onClick={onEdit} className="win-button text-[10px] px-2">
           编辑
         </button>

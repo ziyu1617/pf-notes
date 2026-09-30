@@ -32,10 +32,11 @@ export function NotepadApp() {
   // 当前视图
   const [currentView, setCurrentView] = useState<ViewType>('calendar')
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
+  const [directoryNoteId, setDirectoryNoteId] = useState<string | null>(null)
   const [showExitDialog, setShowExitDialog] = useState(false)
   const [calendarDate, setCalendarDate] = useState<string | undefined>()
   const [draftDiaryDate, setDraftDiaryDate] = useState<string | null>(null)
-  const [noteOrigin, setNoteOrigin] = useState<'list' | 'calendar'>('list')
+  const [noteOrigin, setNoteOrigin] = useState<'list' | 'calendar' | 'directory'>('list')
   
   const windowRef = useRef<HTMLDivElement>(null)
 
@@ -103,6 +104,14 @@ export function NotepadApp() {
     setCurrentView('view')
   }
 
+  const handleSelectDirectoryNote = (note: Note) => {
+    setDirectoryNoteId(note.id)
+    setSelectedNote(note)
+    setDraftDiaryDate(null)
+    setNoteOrigin('directory')
+    setCurrentView('list')
+  }
+
   const handleOpenCalendarNote = (note: Note) => {
     setCalendarDate(getNoteDate(note))
     setDraftDiaryDate(null)
@@ -131,7 +140,12 @@ export function NotepadApp() {
   const handleSaveEditedNote = async (noteId: string, title: string, content: string, category: string) => {
     const updated = await updateNote(noteId, { title, content, category })
     setSelectedNote(updated ?? null)
-    setCurrentView('view')
+    if (noteOrigin === 'directory') {
+      setDirectoryNoteId(updated?.id ?? null)
+      setCurrentView('list')
+    } else {
+      setCurrentView('view')
+    }
   }
 
   // 删除笔记
@@ -140,7 +154,10 @@ export function NotepadApp() {
     if (selectedNote?.id === id) {
       setSelectedNote(null)
     }
-    setCurrentView(noteOrigin)
+    if (directoryNoteId === id) {
+      setDirectoryNoteId(null)
+    }
+    setCurrentView(noteOrigin === 'calendar' ? 'calendar' : 'list')
   }
 
   // 退出确认
@@ -159,6 +176,45 @@ export function NotepadApp() {
     )
   }
 
+  const originView = noteOrigin === 'calendar' ? 'calendar' : 'list'
+  const showDirectory = currentView === 'list' || (
+    noteOrigin === 'directory' && (currentView === 'edit' || currentView === 'delete')
+  )
+  const directoryNote = notes.find(note => note.id === directoryNoteId) ??
+    Object.values(getNotesByDate())[0]?.[0] ?? null
+
+  const handleDirectoryAction = (view: 'edit' | 'delete') => {
+    if (!directoryNote) return
+    setDirectoryNoteId(directoryNote.id)
+    setSelectedNote(directoryNote)
+    setNoteOrigin('directory')
+    setCurrentView(view)
+  }
+
+  const editView = selectedNote && (
+    <NoteEditor
+      key={selectedNote.id}
+      diaryDate={selectedNote.diaryDate ?? undefined}
+      initialTitle={selectedNote.title}
+      initialContent={selectedNote.content}
+      initialCategory={selectedNote.category}
+      categories={categories}
+      onSave={(title, content, category) =>
+        handleSaveEditedNote(selectedNote.id, title, content, category)
+      }
+      onCancel={() => setCurrentView(noteOrigin === 'directory' ? 'list' : 'view')}
+      isEditing
+    />
+  )
+
+  const deleteView = selectedNote && (
+    <DeleteView
+      note={selectedNote}
+      onDelete={handleDeleteNote}
+      onCancel={() => setCurrentView(originView)}
+    />
+  )
+
   return (
     <div className="glass-desktop h-screen w-screen bg-[#008080] flex flex-col overflow-hidden">
       {/* 主窗口 - 铺满整个原生窗口 */}
@@ -174,7 +230,7 @@ export function NotepadApp() {
         />
         
         {/* 菜单栏 - 4 个主要功能按钮 */}
-        <MenuBar onAction={handleMenuAction} currentView={currentView} />
+        <MenuBar onAction={handleMenuAction} currentView={showDirectory ? 'list' : currentView} />
         
         {/* 内容区域 */}
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -188,13 +244,23 @@ export function NotepadApp() {
             />
           )}
 
-          {currentView === 'list' && (
+          {showDirectory && (
             <DirectoryView
-              notesByDate={getNotesByDate()}
               notesByCategory={getNotesByCategory}
               categories={categories}
-              onSelectNote={handleOpenNote}
-            />
+              selectedNote={directoryNote}
+              onSelectNote={handleSelectDirectoryNote}
+              selectionDisabled={currentView !== 'list'}
+            >
+              {currentView === 'edit' ? editView : currentView === 'delete' ? deleteView : directoryNote && (
+                <NoteViewer
+                  key={directoryNote.id}
+                  note={directoryNote}
+                  onEdit={() => handleDirectoryAction('edit')}
+                  onDelete={() => handleDirectoryAction('delete')}
+                />
+              )}
+            </DirectoryView>
           )}
           
           {currentView === 'new' && (
@@ -204,7 +270,7 @@ export function NotepadApp() {
               diaryDate={draftDiaryDate ?? undefined}
               categories={categories}
               onSave={handleSaveNewNote}
-              onCancel={() => { setDraftDiaryDate(null); setCurrentView(noteOrigin) }}
+              onCancel={() => { setDraftDiaryDate(null); setCurrentView(originView) }}
             />
           )}
           
@@ -213,26 +279,12 @@ export function NotepadApp() {
               note={selectedNote}
               onEdit={() => setCurrentView('edit')}
               onDelete={() => setCurrentView('delete')}
-              onBack={() => setCurrentView(noteOrigin)}
+              onBack={() => setCurrentView(originView)}
               backLabel={noteOrigin === 'calendar' ? '返回日历' : undefined}
             />
           )}
           
-          {currentView === 'edit' && selectedNote && (
-            <NoteEditor
-              key={selectedNote.id}
-              diaryDate={selectedNote.diaryDate ?? undefined}
-              initialTitle={selectedNote.title}
-              initialContent={selectedNote.content}
-              initialCategory={selectedNote.category}
-              categories={categories}
-              onSave={(title, content, category) => 
-                handleSaveEditedNote(selectedNote.id, title, content, category)
-              }
-              onCancel={() => setCurrentView('view')}
-              isEditing
-            />
-          )}
+          {currentView === 'edit' && !showDirectory && editView}
           
           {currentView === 'search' && (
             <SearchView
@@ -242,13 +294,7 @@ export function NotepadApp() {
             />
           )}
           
-          {currentView === 'delete' && selectedNote && (
-            <DeleteView
-              note={selectedNote}
-              onDelete={handleDeleteNote}
-              onCancel={() => setCurrentView(noteOrigin)}
-            />
-          )}
+          {currentView === 'delete' && !showDirectory && deleteView}
           
           {currentView === 'strawberry' && (
             <StrawberryChatView />

@@ -1,25 +1,29 @@
 "use client"
 
-import { Note } from '@/hooks/use-notes'
-import { stripImageMarkdown } from '@/lib/images'
+import type { ReactNode } from 'react'
+import type { Note } from '@/hooks/use-notes'
 
 interface DirectoryViewProps {
-  notesByDate: Record<string, Note[]>
   notesByCategory: (category: string) => Note[]
   categories: string[]
+  selectedNote: Note | null
   onSelectNote: (note: Note) => void
+  selectionDisabled?: boolean
+  children: ReactNode
 }
 
 export function DirectoryView({ 
-  notesByDate, 
   notesByCategory, 
   categories, 
-  onSelectNote 
+  selectedNote,
+  onSelectNote,
+  selectionDisabled = false,
+  children,
 }: DirectoryViewProps) {
   return (
-    <div className="fv-secondary fv-directory flex-1 flex overflow-hidden">
+    <div className="fv-secondary fv-directory min-h-0 flex-1 flex overflow-hidden">
       {/* 左侧分类列表 */}
-      <div className="fv-directory-sidebar w-36 shrink-0 border-r border-[#808080] bg-white win-inset overflow-auto sm:w-48">
+      <nav aria-label="分类目录" className="fv-directory-sidebar w-36 shrink-0 border-r border-[#808080] bg-white win-inset overflow-auto sm:w-48">
         <div className="fv-section-bar p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
           📁 分类目录
         </div>
@@ -34,7 +38,10 @@ export function DirectoryView({
                   <button
                     key={note.id}
                     onClick={() => onSelectNote(note)}
-                    className="fv-directory-link w-full text-left text-[11px] px-2 py-0.5 hover:bg-[#000080] hover:text-white truncate"
+                    aria-current={selectedNote?.id === note.id ? 'page' : undefined}
+                    disabled={selectionDisabled}
+                    title={note.title}
+                    className={`fv-directory-link w-full text-left text-[11px] px-2 py-0.5 hover:bg-[#000080] hover:text-white truncate disabled:cursor-default ${selectedNote?.id === note.id ? 'bg-[#000080] text-white' : ''}`}
                   >
                     📄 {note.title}
                   </button>
@@ -43,42 +50,16 @@ export function DirectoryView({
             </div>
           ))}
         </div>
-      </div>
+      </nav>
       
-      {/* 右侧时间线 */}
-      <div className="fv-directory-timeline min-w-0 flex-1 bg-white win-inset overflow-auto">
-        <div className="fv-section-bar p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
-          📅 按时间查看
-        </div>
-        <div className="p-2">
-          {Object.keys(notesByDate).length === 0 && (
-            <div className="fv-muted p-4 text-center text-[11px] text-[#808080]">
-              暂无笔记，请点击 [3] 新建笔记 创建
-            </div>
-          )}
-          {Object.entries(notesByDate).map(([date, notes]) => (
-            <div key={date} className="mb-3">
-              <div className="fv-date-label text-[11px] font-bold px-2 py-1 bg-[#ece9d8] border border-[#808080] mb-1">
-                📅 {date}
-              </div>
-              <div className="pl-2 space-y-1">
-                {notes.map(note => (
-                  <button
-                    key={note.id}
-                    onClick={() => onSelectNote(note)}
-                    className="fv-note-card w-full text-left text-[11px] p-2 border border-[#d4d0c8] hover:bg-[#000080] hover:text-white hover:border-[#000080]"
-                  >
-                    <div className="font-bold">📄 {note.title}</div>
-                    <div className="text-[10px] opacity-70 truncate mt-0.5">
-                      [{note.category}] {stripImageMarkdown(note.content).substring(0, 50)}...
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 只切换右侧阅读区，保留左侧目录与滚动位置。 */}
+      <section aria-label="笔记内容" className="fv-directory-reader min-w-0 min-h-0 flex-1 flex flex-col overflow-hidden">
+        {children || (
+          <div className="fv-muted p-4 text-center text-[11px] text-[#808080]">
+            暂无笔记，请点击 [3] 新建笔记 创建
+          </div>
+        )}
+      </section>
     </div>
   )
 }
