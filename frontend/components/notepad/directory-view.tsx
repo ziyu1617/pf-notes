@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { Note } from '@/hooks/use-notes'
 
 interface DirectoryViewProps {
@@ -20,6 +20,12 @@ export function DirectoryView({
   selectionDisabled = false,
   children,
 }: DirectoryViewProps) {
+  const selectedNoteRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    selectedNoteRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+  }, [selectedNote?.id, selectedNote?.category])
+
   return (
     <div className="fv-secondary fv-directory min-h-0 flex-1 flex overflow-hidden">
       {/* 左侧分类列表 */}
@@ -37,6 +43,7 @@ export function DirectoryView({
                 {notesByCategory(category).map(note => (
                   <button
                     key={note.id}
+                    ref={selectedNote?.id === note.id ? selectedNoteRef : undefined}
                     onClick={() => onSelectNote(note)}
                     aria-current={selectedNote?.id === note.id ? 'page' : undefined}
                     disabled={selectionDisabled}

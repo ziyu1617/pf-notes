@@ -114,10 +114,7 @@ export function NotepadApp() {
 
   const handleOpenCalendarNote = (note: Note) => {
     setCalendarDate(getNoteDate(note))
-    setDraftDiaryDate(null)
-    setNoteOrigin('calendar')
-    setSelectedNote(note)
-    setCurrentView('view')
+    handleSelectDirectoryNote(note)
   }
 
   const handleCreateDiary = (date: string) => {
