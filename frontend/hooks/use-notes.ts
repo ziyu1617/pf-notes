@@ -27,6 +27,17 @@ export function getNoteDate(note: Pick<Note, 'diaryDate' | 'createdAt'>): string
   return `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+/** Reading order follows the diary day, never the most recent edit. */
+export function compareNotesByDateDescending(a: Note, b: Note): number {
+  const dayOrder = getNoteDate(b).localeCompare(getNoteDate(a))
+  if (dayOrder) return dayOrder
+  const createdTime = (note: Note) => {
+    const value = Date.parse(note.createdAt.trim().replace(' ', 'T'))
+    return Number.isFinite(value) ? value : 0
+  }
+  return createdTime(b) - createdTime(a) || b.id.localeCompare(a.id, undefined, { numeric: true })
+}
+
 async function noteRequest(path: string, options?: RequestInit): Promise<Response> {
   let response: Response
   try {

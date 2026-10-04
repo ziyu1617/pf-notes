@@ -12,6 +12,7 @@ import { SearchView } from './search-view'
 import { DeleteView } from './delete-view'
 import { StrawberryChatView } from './strawberry-chat-view'
 import { ExitDialog } from './exit-dialog'
+import { saveAllStickyDrafts } from '@/lib/sticky-notes'
 
 // 视图类型
 type ViewType = 'calendar' | 'list' | 'new' | 'view' | 'edit' | 'search' | 'delete' | 'strawberry'
@@ -39,6 +40,11 @@ export function NotepadApp() {
   const [noteOrigin, setNoteOrigin] = useState<'list' | 'calendar' | 'directory'>('list')
   
   const windowRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.smartNotesFlushSticky = saveAllStickyDrafts
+    return () => { delete window.smartNotesFlushSticky }
+  }, [])
 
   // 处理菜单操作 - 直接切换视图
   const handleMenuAction = useCallback((action: string) => {

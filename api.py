@@ -8,9 +8,9 @@ import datetime
 import logging
 import re
 from pathlib import Path
-from typing import Annotated, Optional, List
+from typing import Annotated, Optional, List, Literal
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Request, Path as ApiPath
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request, Query, Path as ApiPath
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
@@ -239,6 +239,52 @@ def init_db():
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_items(date, time)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_calendar_tag ON calendar_item_tags(tag_id)")
+        # Desktop sticky notes belong to a calendar date, independently of tasks.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sticky_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                content TEXT NOT NULL DEFAULT '',
+                color TEXT NOT NULL DEFAULT 'yellow' CHECK (color IN ('yellow', 'blue', 'green', 'pink')),
+                revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                deleted_at TEXT
+            )
+        """)
+        sticky_columns = {row["name"] for row in conn.execute("PRAGMA table_info(sticky_notes)")}
+        if "revision" not in sticky_columns:
+            conn.execute("ALTER TABLE sticky_notes ADD COLUMN revision INTEGER NOT NULL DEFAULT 0")
+        if "deleted_at" not in sticky_columns:
+            # Keep tombstones even in older tables without AUTOINCREMENT. A
+            # stale desktop window must never write to a recycled note ID.
+            conn.execute("ALTER TABLE sticky_notes ADD COLUMN deleted_at TEXT")
+        if "color" not in sticky_columns:
+            conn.execute("ALTER TABLE sticky_notes ADD COLUMN color TEXT NOT NULL DEFAULT 'yellow' CHECK (color IN ('yellow', 'blue', 'green', 'pink'))")
+        conn.execute("UPDATE sticky_notes SET color = 'yellow' WHERE color IS NULL OR color NOT IN ('yellow', 'blue', 'green', 'pink')")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sticky_date ON sticky_notes(date, id)")
+        # Do not erase or combine historical same-day notes during migration.
+        # Triggers enforce the new rule atomically even when those duplicates
+        # prevent a unique index; users can still edit/delete every old note.
+        conn.execute("""CREATE TRIGGER IF NOT EXISTS sticky_notes_one_active_date_insert
+            BEFORE INSERT ON sticky_notes
+            WHEN NEW.deleted_at IS NULL AND EXISTS (
+                SELECT 1 FROM sticky_notes WHERE date = NEW.date AND deleted_at IS NULL
+            )
+            BEGIN SELECT RAISE(ABORT, 'sticky_note_date_conflict'); END""")
+        conn.execute("""CREATE TRIGGER IF NOT EXISTS sticky_notes_one_active_date_update
+            BEFORE UPDATE OF date, deleted_at ON sticky_notes
+            WHEN NEW.deleted_at IS NULL AND (OLD.deleted_at IS NOT NULL OR NEW.date != OLD.date)
+                AND EXISTS (
+                    SELECT 1 FROM sticky_notes
+                    WHERE date = NEW.date AND deleted_at IS NULL AND id != NEW.id
+                )
+            BEGIN SELECT RAISE(ABORT, 'sticky_note_date_conflict'); END""")
+        duplicates = conn.execute("""SELECT 1 FROM sticky_notes WHERE deleted_at IS NULL
+            GROUP BY date HAVING COUNT(*) > 1 LIMIT 1""").fetchone()
+        if duplicates is None:
+            conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_sticky_one_active_date
+                ON sticky_notes(date) WHERE deleted_at IS NULL""")
 
 
 def row_to_dict(row) -> dict:
@@ -438,9 +484,78 @@ class CalendarItemUpdate(CalendarItemCreate):
     completed: Optional[StrictBool] = None
 
 
+# ── 便签数据模型 ──────────────────────────────────────────
+
+StickyNoteId = Annotated[str, ApiPath(pattern=r"^[1-9][0-9]{0,18}$")]
+StickyNoteColor = Literal["yellow", "blue", "green", "pink"]
+
+
+def validate_sticky_date(value: str) -> str:
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+        raise ValueError("便签日期须使用 YYYY-MM-DD 格式")
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        raise ValueError("请选择有效的便签日期") from None
+    return value
+
+
+class StickyNoteCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    date: str
+    content: str = Field(default="", max_length=20000)
+    color: StickyNoteColor = "yellow"
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, value):
+        return validate_sticky_date(value)
+
+
+class StickyNoteUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    content: Optional[str] = Field(default=None, max_length=20000)
+    color: Optional[StickyNoteColor] = None
+    # Reserve one increment within SQLite's signed integer range.
+    revision: int = Field(ge=0, le=9223372036854775806)
+
+    @field_validator("content", "color", mode="before")
+    @classmethod
+    def reject_null_fields(cls, value):
+        if value is None:
+            raise ValueError("便签正文和颜色不能为 null")
+        return value
+
+    @model_validator(mode="after")
+    def require_changes(self):
+        if not {"content", "color"}.intersection(self.model_fields_set):
+            raise ValueError("请至少提供便签正文或颜色")
+        return self
+
+
+class StickyNoteDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    revision: int = Field(ge=0, le=9223372036854775807)
+
+
 @app.exception_handler(RequestValidationError)
 async def calendar_validation_error(request: Request, exc: RequestValidationError):
-    # 仅给新增日历接口提供中文提示，保留现有接口的错误结构。
+    # 新增便签、日历接口提供中文提示，保留其他接口的错误结构。
+    if request.url.path == "/api/sticky-notes" or request.url.path.startswith("/api/sticky-notes/"):
+        error = exc.errors()[0]
+        detail = error["msg"].removeprefix("Value error, ") if error["type"] == "value_error" else {
+            "missing": "请填写便签日期、正文和版本等所需字段",
+            "extra_forbidden": "请求包含不支持的便签字段",
+            "json_invalid": "便签数据格式有误",
+            "string_type": "便签日期和正文须为文本，不能为 null",
+            "string_too_long": "便签正文不能超过 20000 个字符",
+            "int_type": "便签版本须为非负整数",
+            "greater_than_equal": "便签版本须为非负整数",
+            "less_than_equal": "便签版本无效，请重新打开便签",
+            "string_pattern_mismatch": "便签编号无效",
+            "literal_error": "便签颜色须为 yellow、blue、green 或 pink",
+        }.get(error["type"], "便签字段格式有误，请检查后重试")
+        return JSONResponse(status_code=422, content={"detail": detail})
     if not request.url.path.startswith("/api/calendar"):
         return await request_validation_exception_handler(request, exc)
     error = exc.errors()[0]
@@ -589,6 +704,103 @@ def delete_calendar_item(item_id: CalendarId):
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="事项不存在")
     return {"ok": True}
+
+
+# ── 便签持久化 ────────────────────────────────────────────
+
+def sticky_note_to_dict(row) -> dict:
+    return {
+        "id": str(row["id"]),
+        "date": row["date"],
+        "content": row["content"],
+        "color": row["color"],
+        "revision": row["revision"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def sticky_note_id(value: str) -> int:
+    note_id = int(value)
+    if note_id > 9223372036854775807:
+        raise HTTPException(status_code=422, detail="便签编号无效")
+    return note_id
+
+
+@app.get("/api/sticky-notes")
+def list_sticky_notes(date: Annotated[str, Query()]):
+    try:
+        validate_sticky_date(date)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM sticky_notes WHERE date = ? AND deleted_at IS NULL ORDER BY id", (date,)).fetchall()
+    return [sticky_note_to_dict(row) for row in rows]
+
+
+@app.post("/api/sticky-notes", status_code=201)
+def create_sticky_note(note: StickyNoteCreate):
+    timestamp = now()
+    with get_db() as conn:
+        try:
+            cursor = conn.execute(
+                "INSERT INTO sticky_notes (date, content, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (note.date, note.content, note.color, timestamp, timestamp),
+            )
+        except sqlite3.IntegrityError as error:
+            if "sticky_note_date_conflict" in str(error) or "UNIQUE constraint failed: sticky_notes.date" in str(error):
+                raise HTTPException(status_code=409, detail="这一天已有便签，每个日期只能创建一张；请编辑已有便签，或删除后再新建。") from None
+            raise
+        row = conn.execute("SELECT * FROM sticky_notes WHERE id = ?", (cursor.lastrowid,)).fetchone()
+    return sticky_note_to_dict(row)
+
+
+@app.get("/api/sticky-notes/{note_id}")
+def get_sticky_note(note_id: StickyNoteId):
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM sticky_notes WHERE id = ? AND deleted_at IS NULL", (sticky_note_id(note_id),)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="便签不存在")
+    return sticky_note_to_dict(row)
+
+
+@app.put("/api/sticky-notes/{note_id}")
+def update_sticky_note(note_id: StickyNoteId, note: StickyNoteUpdate):
+    parsed_id = sticky_note_id(note_id)
+    updates = note.model_dump(exclude_unset=True, exclude={"revision"})
+    set_clause = ", ".join(f"{field} = ?" for field in updates)
+    with get_db() as conn:
+        # Compare and increment in one write: two windows cannot both save the
+        # same revision, even if their requests reach different worker threads.
+        cursor = conn.execute(
+            f"""UPDATE sticky_notes SET {set_clause}, revision = revision + 1, updated_at = ?
+                WHERE id = ? AND revision = ? AND deleted_at IS NULL""",
+            (*updates.values(), now(), parsed_id, note.revision),
+        )
+        row = conn.execute("SELECT * FROM sticky_notes WHERE id = ? AND deleted_at IS NULL", (parsed_id,)).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="便签不存在")
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=409, detail="这张便签已在其他窗口更新，请保留当前文字并重新读取最新内容后再保存。")
+    return sticky_note_to_dict(row)
+
+
+@app.delete("/api/sticky-notes/{note_id}")
+def delete_sticky_note(note_id: StickyNoteId, note: StickyNoteDelete):
+    parsed_id = sticky_note_id(note_id)
+    with get_db() as conn:
+        # The revision check and tombstone write are atomic with respect to PUT.
+        cursor = conn.execute(
+            """UPDATE sticky_notes SET deleted_at = ?
+               WHERE id = ? AND revision = ? AND deleted_at IS NULL""",
+            (now(), parsed_id, note.revision),
+        )
+        if cursor.rowcount == 0:
+            row = conn.execute("SELECT deleted_at FROM sticky_notes WHERE id = ?", (parsed_id,)).fetchone()
+            if row is None or row["deleted_at"] is not None:
+                raise HTTPException(status_code=404, detail="便签不存在或已删除")
+            raise HTTPException(status_code=409, detail="这张便签已在其他窗口更新，请读取最新内容并核对后再删除。")
+    return {"success": True}
 
 
 # ── 笔记 CRUD ─────────────────────────────────────────────

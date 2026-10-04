@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, type ReactNode } from 'react'
-import type { Note } from '@/hooks/use-notes'
+import { compareNotesByDateDescending, type Note } from '@/hooks/use-notes'
 
 interface DirectoryViewProps {
   notesByCategory: (category: string) => Note[]
@@ -40,7 +40,7 @@ export function DirectoryView({
                 📂 {category}
               </div>
               <div className="pl-2">
-                {notesByCategory(category).map(note => (
+                {notesByCategory(category).slice().sort(compareNotesByDateDescending).map(note => (
                   <button
                     key={note.id}
                     ref={selectedNote?.id === note.id ? selectedNoteRef : undefined}

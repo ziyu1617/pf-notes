@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCalendar, type CalendarItem, type CalendarItemInput, type CalendarTag } from '@/hooks/use-calendar'
 import { getNoteDate, type Note } from '@/hooks/use-notes'
 import { ContextMenu } from './context-menu'
+import { StickyDock } from './sticky-dock'
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 const TAG_COLORS = [
@@ -426,6 +427,7 @@ export function CalendarView({ notes, initialDate, onDateChange, onCreateDiary, 
               </article>
             ))}
           </div>
+          <StickyDock key={selectedDate} date={selectedDate} />
         </aside>
       </div>
       <div className="glass-calendar-status min-h-6 shrink-0 border-t border-[#808080] bg-[#d4d0c8] px-2 py-1 text-[10px] text-[#404040]" role="status" aria-live="polite">
