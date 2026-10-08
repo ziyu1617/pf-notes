@@ -58,6 +58,13 @@ jobs:
         run: python scripts/smoke_desktop.py "${{ matrix.executable }}" --report "dist/reports/${{ matrix.target }}-backend.json"
       - name: Native renderer smoke
         run: python scripts/smoke_desktop.py "${{ matrix.executable }}" --gui --report "dist/reports/${{ matrix.target }}-gui.json"
+      - name: Install, launch, and uninstall Windows package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist/releases/SmartNotes-*-windows-x64-setup.exe | Select-Object -First 1
+          python scripts/test_windows_installer.py $installer.FullName --reports dist/reports
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload packages and validation reports
         if: always()
         uses: actions/upload-artifact@v4

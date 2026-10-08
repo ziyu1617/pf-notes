@@ -1,5 +1,6 @@
 """Packaging checks without loading the API, GUI, or personal data."""
 import importlib.util
+import json
 import os
 import sys
 import tempfile
@@ -61,6 +62,37 @@ class PackagingPathsTests(unittest.TestCase):
         with patch.object(build.sys, 'platform', 'linux'):
             with self.assertRaises(RuntimeError):
                 build.native_target()
+
+    def test_installer_harness_checks_installed_binary_and_preserves_fixture(self):
+        spec = importlib.util.spec_from_file_location('installer_harness_test', ROOT / 'scripts' / 'test_windows_installer.py')
+        harness = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(harness)
+        calls = []
+
+        def simulate(command, **kwargs):
+            calls.append(command)
+            if Path(command[0]).name == 'setup.exe':
+                self.assertIn('/VERYSILENT', command)
+                folder = Path(next(value[5:] for value in command if value.startswith('/DIR=')))
+                folder.mkdir()
+                (folder / 'SmartNotes.exe').touch()
+                (folder / 'unins000.exe').touch()
+            elif Path(command[0]).name == 'unins000.exe':
+                folder = Path(command[0]).parent
+                (folder / 'SmartNotes.exe').unlink()
+                (folder / 'unins000.exe').unlink()
+            else:
+                self.assertTrue(Path(command[2]).is_file())
+
+        with tempfile.TemporaryDirectory() as folder:
+            reports = Path(folder) / 'reports'
+            with patch.object(harness.sys, 'platform', 'win32'), patch.object(harness.sys, 'argv',
+                    ['test_windows_installer.py', str(Path(folder) / 'setup.exe'), '--reports', str(reports)]), patch.object(harness.subprocess, 'run', side_effect=simulate):
+                self.assertEqual(harness.main(), 0)
+            report = json.loads((reports / 'windows-installer.json').read_text())
+            self.assertEqual(report['checks'], ['silent-install', 'installed-backend', 'installed-native-renderer',
+                                               'uninstall-removes-app', 'preserves-separate-user-data-fixture'])
+            self.assertEqual(len(calls), 4)
 
 
 if __name__ == '__main__':

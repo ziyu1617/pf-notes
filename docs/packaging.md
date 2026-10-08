@@ -36,6 +36,8 @@ Optional AI credentials belong in `~/.smart_notes.env` for installed builds, for
 
 Each frozen executable runs a backend/resource smoke test against a new temporary database, then a separate native renderer smoke test. Both run under a 90-second parent timeout. The renderer check must load the page and execute JavaScript successfully; a missing WebView2 runtime or GUI initialization error fails the job. These checks do not replace manual installation, diary editing, IME, sticky dragging/resizing, multi-monitor, sleep/wake, upgrade, and uninstall testing on real user machines.
 
+The Windows job additionally installs the actual setup executable silently into a disposable directory, repeats backend and GUI checks against the installed executable, and uninstalls it normally. A separate SQLite/attachment fixture must keep the same hashes after uninstall. This tests package removal without touching the runner's real home directory. See `dist/reports/windows-installer.json` and the installed-app reports for results.
+
 ```sh
 python scripts/smoke_desktop.py "dist/Smart Notes.app/Contents/MacOS/SmartNotes" --report dist/reports/local-backend.json
 python scripts/smoke_desktop.py "dist/Smart Notes.app/Contents/MacOS/SmartNotes" --gui --report dist/reports/local-gui.json
