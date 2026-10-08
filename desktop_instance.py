@@ -6,6 +6,7 @@ import logging
 import os
 import socket
 import stat
+import sys
 import threading
 import time
 from pathlib import Path
@@ -18,7 +19,7 @@ except ImportError:  # Other platforms retain the ordinary port conflict check.
 logger = logging.getLogger(__name__)
 
 
-class DesktopInstance:
+class PosixDesktopInstance:
     def __init__(self, project, port, runtime_dir=None):
         self.enabled = fcntl is not None and hasattr(socket, 'AF_UNIX')
         key = hashlib.sha256(f'{Path(project).resolve()}:{port}'.encode()).hexdigest()[:20]
@@ -156,7 +157,12 @@ def reserve_backend_socket(port):
     """Reserve the actual listener, eliminating bind-check/start races."""
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if sys.platform == 'win32':
+            # Windows REUSEADDR may allow another listener to steal traffic.
+            # EXCLUSIVEADDRUSE reserves the endpoint without terminating it.
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        else:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind(('127.0.0.1', port))
         listener.listen(128)
         listener.setblocking(False)
@@ -166,3 +172,9 @@ def reserve_backend_socket(port):
         if error.errno == errno.EADDRINUSE:
             raise RuntimeError(f'端口 {port} 正被其他实例或程序使用；未关闭任何进程。') from error
         raise RuntimeError(f'无法启动本地服务：{error}') from error
+
+
+if sys.platform == 'win32':
+    from desktop_windows_instance import WindowsDesktopInstance as DesktopInstance
+else:
+    DesktopInstance = PosixDesktopInstance

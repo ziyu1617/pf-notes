@@ -16,3 +16,8 @@ venv/
 
 # Local frontend rollback archives
 .ui-backups/
+
+# Desktop package output
+/build/
+/dist/
+/.venv-packaging/

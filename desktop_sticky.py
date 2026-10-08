@@ -430,13 +430,29 @@ class StickyBridge:
         except ValueError as error:
             return {"ok": False, "error": str(error)}
 
+    def set_sticky_composing(self, note_id, composing):
+        try:
+            if self._own_id is None or not isinstance(composing, bool):
+                raise ValueError('无效的便签输入状态')
+            return self._manager.set_composing(self._id(note_id), composing)
+        except ValueError as error:
+            return {"ok": False, "error": str(error)}
+
 
 class StickyWindowManager:
     def __init__(self, base_url, exists, webview, native=None):
         self._base_url = base_url.rstrip('/')
         self._exists = exists
         self._webview = webview
-        self._native = native or (CocoaWindows() if sys.platform == 'darwin' else PortableWindows(webview))
+        if native is not None:
+            self._native = native
+        elif sys.platform == 'darwin':
+            self._native = CocoaWindows()
+        elif sys.platform == 'win32':
+            from desktop_windows import WindowsWindows
+            self._native = WindowsWindows()
+        else:
+            self._native = PortableWindows(webview)
         self._lock = threading.RLock()
         self._main_open_lock = threading.Lock()
         self._windows = {}
@@ -611,6 +627,18 @@ class StickyWindowManager:
                 self._docks[note_id] = bounds
         return {'ok': True}
 
+    def set_composing(self, note_id, composing):
+        with self._lock:
+            window = self._windows.get(note_id)
+        if window is None or not hasattr(self._native, 'set_composing'):
+            return {'ok': False, 'error': '便签输入窗口不可用'}
+        try:
+            self._native.set_composing(window, composing)
+            return {'ok': True}
+        except Exception:
+            logger.exception('Could not update sticky composition state')
+            return {'ok': False, 'error': '无法更新便签窗口状态'}
+
     def resize(self, note_id, corner, point):
         if not hasattr(self._native, 'resize_to_pointer'):
             return {'ok': False, 'error': '当前桌面暂不支持拖角缩放'}
@@ -723,7 +751,8 @@ class StickyWindowManager:
                 # Cocoa owns its floating level directly. Keeping pywebview's
                 # flag false also avoids its async set_on_top status-level
                 # callback overriding our native level after placement/show.
-                easy_drag=False, on_top=not isinstance(self._native, CocoaWindows),
+                easy_drag=False, on_top=not (isinstance(self._native, CocoaWindows)
+                                             or getattr(self._native, 'native_topmost', False)),
                 shadow=True, text_select=True,
                 background_color='#FCF4C6')
             if window is None:
@@ -767,7 +796,7 @@ class StickyWindowManager:
             if place:
                 self._native.place(window, self._main_window, point)
                 self._show(note_id, window)
-            if isinstance(self._native, CocoaWindows):
+            if isinstance(self._native, CocoaWindows) or getattr(self._native, 'native_header_drag', False):
                 # Use native global coordinates across displays. Intercept only
                 # the header, leaving editor selection and all controls intact.
                 window.evaluate_js("""(() => {
@@ -805,6 +834,19 @@ class StickyWindowManager:
                   window.addEventListener('pagehide', () => {
                     if (cancelGesture) cancelGesture();
                   }, { once: true });
+                })()""" % repr(note_id))
+            if getattr(self._native, 'composition_events', False):
+                self._native.set_composing(window, False)
+                window.evaluate_js("""(() => {
+                  if (window.__smartNotesComposition) return;
+                  window.__smartNotesComposition = true;
+                  let queue = Promise.resolve();
+                  const composing = active => {
+                    queue = queue.then(() => window.pywebview.api.set_sticky_composing(%s, active)).catch(() => {});
+                  };
+                  document.addEventListener('compositionstart', () => composing(true), true);
+                  document.addEventListener('compositionend', () => composing(false), true);
+                  window.addEventListener('blur', () => composing(false));
                 })()""" % repr(note_id))
         except Exception:
             logger.exception("Could not position sticky window")

@@ -19,8 +19,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 from openai import OpenAI
 from dotenv import load_dotenv
+from runtime_paths import config_path, data_root, resource_root
 
-load_dotenv()
+load_dotenv(config_path())
 
 app = FastAPI(title="Smart Notes API")
 
@@ -32,10 +33,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DB_PATH = Path.home() / ".smart_notes.db"
+DB_PATH = data_root() / ".smart_notes.db"
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # 笔记内粘贴/插入的图片以文件形式保存在此，笔记正文里只存对它们的引用，
 # 避免 base64 撑大数据库、也避免把图片塞进发往模型的上下文。
-UPLOADS_DIR = Path.home() / ".smart_notes_uploads"
+UPLOADS_DIR = data_root() / ".smart_notes_uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
 # 允许的图片类型及其文件扩展名
 IMAGE_EXTENSIONS = {
@@ -1007,6 +1009,6 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 # 若前端已构建（npm run export），则把它挂到根路径。
 # 前端源码就在仓库的 frontend/ 子目录，构建产物在 frontend/out。
-FRONTEND_DIR = Path(__file__).resolve().parent / "frontend" / "out"
+FRONTEND_DIR = resource_root() / "frontend" / "out"
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

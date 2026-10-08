@@ -12,6 +12,7 @@ import webview
 import uvicorn
 from desktop_instance import DesktopInstance, reserve_backend_socket
 from desktop_sticky import StickyWindowManager
+from runtime_paths import instance_identity
 
 
 def wait_for_backend(server, worker, timeout=15):
@@ -49,7 +50,7 @@ def main():
         print("✗ SMART_NOTES_PORT 必须是 1–65535 之间的端口号")
         sys.exit(1)
 
-    instance = DesktopInstance(Path(__file__).parent, port)
+    instance = DesktopInstance(instance_identity(), port)
     server = listener = worker = None
     try:
         if not instance.acquire():

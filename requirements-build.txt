@@ -1,0 +1,13 @@
+-r requirements.txt
+# Freeze the application's tested top-level versions for release builds.
+openai==2.37.0
+python-dotenv==1.2.1
+fastapi==0.128.8
+uvicorn==0.39.0
+pydantic==2.13.4
+python-multipart==0.0.20
+rich==15.0.0
+click==8.1.8
+prompt_toolkit==3.0.52
+pyinstaller==6.22.3
+pywebview==6.2.1

@@ -1,6 +1,7 @@
 """Launch/activation isolation tests. No application database or GUI is opened."""
 
 import errno
+import os
 import socket
 import tempfile
 import threading
@@ -8,9 +9,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from desktop_instance import DesktopInstance, reserve_backend_socket
+from desktop_instance import PosixDesktopInstance as DesktopInstance, reserve_backend_socket
 
 
+@unittest.skipUnless(os.name == 'posix', 'Unix socket/flock regression; Windows has a separate suite')
 class DesktopInstanceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='sn-ipc-', dir='/tmp')
@@ -198,6 +200,18 @@ class DesktopInstanceTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, '无法启动本地服务'):
                 reserve_backend_socket(8000)
             mock.return_value.close.assert_called_once()
+
+
+class BackendSocketPlatformTests(unittest.TestCase):
+    def test_windows_reserves_exclusive_endpoint_instead_of_reusing_another_listener(self):
+        with patch('desktop_instance.sys.platform', 'win32'), \
+                patch('desktop_instance.socket.SO_EXCLUSIVEADDRUSE', -5, create=True), \
+                patch('desktop_instance.socket.socket') as factory:
+            listener = reserve_backend_socket(8000)
+        listener.setsockopt.assert_called_once_with(socket.SOL_SOCKET, -5, 1)
+        listener.bind.assert_called_once_with(('127.0.0.1', 8000))
+        listener.listen.assert_called_once_with(128)
+        listener.setblocking.assert_called_once_with(False)
 
 
 if __name__ == '__main__':
