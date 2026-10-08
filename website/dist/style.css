@@ -10,8 +10,8 @@
 .hero-art{margin:0 -6% 0 -8%;min-height:540px}
 .stationery-art{inset:18px 0 auto;width:100%;height:83%;object-fit:contain;mix-blend-mode:normal}
 .art-caption{bottom:76px;left:10%}.hero.art-ready .round-seal{right:6%;top:-22px}
-.product-stage{padding:36px 5% 22px}
-.product-viewport{position:relative;width:88%;max-width:1020px;aspect-ratio:3/2;margin:auto}
+.product-stage{width:100%;max-width:1084px;margin:42px auto 0;padding:32px 32px 20px}
+.product-viewport{position:relative;width:100%;max-width:1020px;aspect-ratio:3/2;margin:auto}
 .product-window{position:absolute;left:0;top:0;width:1200px;height:800px;transform-origin:top left;transform:scale(var(--preview-scale,1));display:flex;flex-direction:column;border-radius:14px}
 .window-titlebar{height:32px;flex:0 0 32px;font-size:13px;padding:0 16px}.window-dots i{width:10px;height:10px}.window-dots{gap:7px}.preview-badge{font-size:12px}
 .product-toolbar{flex:0 0 52px;font-size:17px;padding:8px 12px;gap:9px}.product-toolbar span{padding:6px 12px;border-radius:8px}
@@ -31,4 +31,4 @@
 @media(min-width:1600px){.hero-art .stationery-art{top:48px;max-height:490px}}
 @media(max-width:760px){.hero-art .stationery-art{inset:10px auto auto 5%;width:90%;height:auto;max-height:270px}}
 
-@media(max-width:760px){.product-viewport{width:100%}}
+@media(max-width:760px){.product-stage{margin:28px auto 0}}
