@@ -2,6 +2,8 @@
 
 # smart notes
 
+[Website & downloads](https://ziyu1617.github.io/pf-notes/)
+
 A local-first notebook for notes, journals, and daily plans, with a calendar-first view and optional AI conversations.
 
 Built with **Next.js, FastAPI, SQLite, and pywebview**. The interface is in Simplified Chinese; the desktop app has been tested on macOS.
