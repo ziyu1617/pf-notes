@@ -219,9 +219,9 @@ class CocoaWindows:
             content.setWantsLayer_(True)
             layer = content.layer()
             if layer is not None:
-                # Clip the content layer, not the window's outer shadow. The
-                # transparent native backing lets the 16px corners show through.
-                layer.setCornerRadius_(16.0)
+                # Clip the content layer, not the window's outer shadow.
+                # Match the paper-like frontend's subtle 3px corners.
+                layer.setCornerRadius_(3.0)
                 layer.setMasksToBounds_(True)
                 native.setOpaque_(False)
                 native.setBackgroundColor_(self._appkit.NSColor.clearColor())
