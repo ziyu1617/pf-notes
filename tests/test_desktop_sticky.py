@@ -525,7 +525,7 @@ class CocoaAppearanceTests(unittest.TestCase):
         driver._configure(window)
         native.setCollectionBehavior_.assert_called_once_with(1 | 64 | 256)
         native.setHidesOnDeactivate_.assert_called_once_with(False)
-        layer.setCornerRadius_.assert_called_once_with(16.0)
+        layer.setCornerRadius_.assert_called_once_with(3.0)
         layer.setMasksToBounds_.assert_called_once_with(True)
         native.setOpaque_.assert_called_once_with(False)
         native.setBackgroundColor_.assert_called_once_with('clear')

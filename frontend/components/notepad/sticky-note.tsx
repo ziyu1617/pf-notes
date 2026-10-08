@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowUpRight, Check, GripHorizontal, LoaderCircle, Pin, StickyNote as StickyIcon, Trash2, X } from 'lucide-react'
+import { ArrowUpRight, Check, GripHorizontal, LoaderCircle, StickyNote as StickyIcon, Trash2, X } from 'lucide-react'
 import { useStickyDraft, type StickyColor, type StickyNote } from '@/lib/sticky-notes'
 import { clampStickySize, resizeStickySize, STICKY_DEFAULT_SIZE, STICKY_MAX_SIZE } from '@/lib/sticky-layout'
 
@@ -263,7 +263,6 @@ export function StickyNoteCard({ note, desktop = false, autoFocus = false, size 
       </div>}
       {!draft.deleted && <footer className="sticky-note-footer">
         <span className="sticky-note-save-state" role="status">{draft.status === 'saving' ? <><LoaderCircle size={11} className="sticky-spinner" /> 保存中</> : draft.status === 'saved' ? <><Check size={11} /> 已保存</> : draft.status === 'pending' ? '正在记录…' : '未保存'}</span>
-        <span>{desktop ? <><Pin size={11} /> 桌面置顶</> : '拖动顶部 · 置顶桌面'}</span>
       </footer>}
       {(['top-left', 'bottom-left'] as const).map(corner => <button key={corner} type="button" className={`sticky-resize-handle sticky-resize-${corner}`} aria-label={`从${corner === 'top-left' ? '左上' : '左下'}角调整便签大小`} title="拖动调整便签大小" disabled={moving || removing || draft.deleting || draft.deleted} onPointerDown={event => startResize(event, corner)} onKeyDown={event => {
         const delta = event.key === 'ArrowLeft' || event.key === '+' ? 12 : event.key === 'ArrowRight' || event.key === '-' ? -12 : event.key === 'ArrowUp' ? (corner === 'top-left' ? 12 : -12) : event.key === 'ArrowDown' ? (corner === 'top-left' ? -12 : 12) : 0
