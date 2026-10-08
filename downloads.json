@@ -1,0 +1,13 @@
+{
+  "packages": {
+    "macos-arm64": {
+      "verified": true,
+      "version": "0.2.0 测试版",
+      "requirements": "Apple 芯片 Mac",
+      "size": "23.4 MB",
+      "label": "Mac 测试版 · .dmg",
+      "url": "https://github.com/ziyu1617/pf-notes/releases/download/v0.2.0-beta.1/SmartNotes-0.2.0-macos-arm64.dmg"
+    }
+  },
+  "notice": "Apple 芯片 Mac 测试版 · 尚未完成 Apple 公证，系统可能阻止启动。下载前请阅读版本说明。"
+}
