@@ -71,22 +71,26 @@ export function useNotes() {
       .catch(() => setIsLoaded(true))
   }, [])
 
-  const addNote = useCallback(async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> => {
+  const addNote = useCallback(async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'> & { draftId?: string }): Promise<Note> => {
+    const body = JSON.stringify(note)
     const res = await noteRequest('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(note),
+      body,
+      keepalive: new TextEncoder().encode(body).byteLength < 60000,
     })
     const newNote: Note = await res.json()
-    setNotes(prev => [newNote, ...prev])
+    setNotes(prev => [newNote, ...prev.filter(existing => existing.id !== newNote.id)])
     return newNote
   }, [])
 
   const updateNote = useCallback(async (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
+    const body = JSON.stringify(updates)
     const res = await noteRequest(`/api/notes/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
+      body,
+      keepalive: new TextEncoder().encode(body).byteLength < 60000,
     })
     const updated: Note = await res.json()
     setNotes(prev => prev.map(n => n.id === id ? updated : n))
