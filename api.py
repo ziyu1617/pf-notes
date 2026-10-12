@@ -181,6 +181,7 @@ def init_db():
                 content TEXT NOT NULL,
                 category TEXT NOT NULL DEFAULT '未分类',
                 diary_date TEXT,
+                draft_id TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -192,6 +193,9 @@ def init_db():
         note_columns = {row["name"] for row in conn.execute("PRAGMA table_info(notes)")}
         if "diary_date" not in note_columns:
             conn.execute("ALTER TABLE notes ADD COLUMN diary_date TEXT")
+        if "draft_id" not in note_columns:
+            conn.execute("ALTER TABLE notes ADD COLUMN draft_id TEXT")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_notes_draft_id ON notes(draft_id)")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS chat_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -361,6 +365,17 @@ class NoteCreate(DiaryDateFields):
     title: str
     content: str
     category: str = "未分类"
+    draftId: Optional[str] = None
+
+    @field_validator("draftId")
+    @classmethod
+    def validate_draft_id(cls, value):
+        if value is None:
+            return None
+        try:
+            return str(uuid.UUID(value))
+        except ValueError:
+            raise ValueError("笔记草稿标识无效") from None
 
 
 class NoteUpdate(DiaryDateFields):
@@ -817,10 +832,14 @@ def create_note(note: NoteCreate):
     t = now()
     with get_db() as conn:
         cur = conn.execute(
-            "INSERT INTO notes (title, content, category, diary_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (note.title, note.content, note.category, note.diaryDate, t, t)
+            """INSERT INTO notes (title, content, category, diary_date, draft_id, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(draft_id) DO NOTHING""",
+            (note.title, note.content, note.category, note.diaryDate, note.draftId, t, t)
         )
-        row = conn.execute("SELECT * FROM notes WHERE id = ?", (cur.lastrowid,)).fetchone()
+        if note.draftId:
+            row = conn.execute("SELECT * FROM notes WHERE draft_id = ?", (note.draftId,)).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM notes WHERE id = ?", (cur.lastrowid,)).fetchone()
     return row_to_dict(row)
 
 

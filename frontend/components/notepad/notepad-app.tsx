@@ -13,6 +13,7 @@ import { DeleteView } from './delete-view'
 import { StrawberryChatView } from './strawberry-chat-view'
 import { ExitDialog } from './exit-dialog'
 import { saveAllStickyDrafts } from '@/lib/sticky-notes'
+import type { FlushNoteDraft } from '@/lib/note-autosave'
 
 // 视图类型
 type ViewType = 'calendar' | 'list' | 'new' | 'view' | 'edit' | 'search' | 'delete' | 'strawberry'
@@ -40,14 +41,23 @@ export function NotepadApp() {
   const [noteOrigin, setNoteOrigin] = useState<'list' | 'calendar' | 'directory'>('list')
   
   const windowRef = useRef<HTMLDivElement>(null)
+  const newNoteFlushRef = useRef<FlushNoteDraft | null>(null)
+  const navigationPendingRef = useRef(false)
+  const [newNoteSession, setNewNoteSession] = useState(0)
+  const registerNewNoteAutosave = useCallback((flush: FlushNoteDraft | null) => {
+    newNoteFlushRef.current = flush
+  }, [])
 
   useEffect(() => {
-    window.smartNotesFlushSticky = saveAllStickyDrafts
+    window.smartNotesFlushSticky = async () => {
+      if (!await saveAllStickyDrafts()) return false
+      return newNoteFlushRef.current ? newNoteFlushRef.current() : true
+    }
     return () => { delete window.smartNotesFlushSticky }
   }, [])
 
-  // 处理菜单操作 - 直接切换视图
-  const handleMenuAction = useCallback((action: string) => {
+  // Leave a new-note draft only after its latest input is saved.
+  const handleMenuAction = useCallback(async (action: string) => {
     if (action === 'exit') {
       setShowExitDialog(true)
       return
@@ -61,9 +71,17 @@ export function NotepadApp() {
     }
     
     if (viewMap[action]) {
-      setDraftDiaryDate(null)
-      setNoteOrigin('list')
-      setCurrentView(viewMap[action])
+      if (navigationPendingRef.current) return
+      navigationPendingRef.current = true
+      try {
+        if (newNoteFlushRef.current && !await newNoteFlushRef.current(true)) return
+        if (action === 'new') setNewNoteSession(session => session + 1)
+        setDraftDiaryDate(null)
+        setNoteOrigin('list')
+        setCurrentView(viewMap[action])
+      } finally {
+        navigationPendingRef.current = false
+      }
     }
   }, [])
 
@@ -131,12 +149,12 @@ export function NotepadApp() {
     setCurrentView('new')
   }
 
-  // 保存新笔记
-  const handleSaveNewNote = async (title: string, content: string, category: string) => {
-    const newNote = await addNote({ title, content, category, ...(draftDiaryDate ? { diaryDate: draftDiaryDate } : {}) })
-    setDraftDiaryDate(null)
+  // Autosave creates once, then updates that note while the editor stays open.
+  const handleSaveNewNote = async (title: string, content: string, category: string, noteId?: string | null, draftId?: string) => {
+    const newNote = noteId ? await updateNote(noteId, { title, content, category }) :
+      await addNote({ title, content, category, draftId, ...(draftDiaryDate ? { diaryDate: draftDiaryDate } : {}) })
     setSelectedNote(newNote)
-    setCurrentView('view')
+    return newNote
   }
 
   // 保存编辑的笔记
@@ -164,7 +182,11 @@ export function NotepadApp() {
   }
 
   // 退出确认
-  const handleExitConfirm = () => {
+  const handleExitConfirm = async () => {
+    if (newNoteFlushRef.current && !await newNoteFlushRef.current()) {
+      setShowExitDialog(false)
+      return
+    }
     setShowExitDialog(false)
     alert('感谢使用！您的笔记已保存。刷新页面可重新打开应用。')
   }
@@ -268,12 +290,26 @@ export function NotepadApp() {
           
           {currentView === 'new' && (
             <NoteEditor
-              key={draftDiaryDate ?? 'new-note'}
-              initialCategory={draftDiaryDate ? '日记' : ''}
+              key={`${draftDiaryDate ?? 'new-note'}:${newNoteSession}`}
+              initialCategory={draftDiaryDate ? '日记' : '未分类'}
               diaryDate={draftDiaryDate ?? undefined}
               categories={categories}
               onSave={handleSaveNewNote}
+              onSaved={(noteId) => {
+                // A recovered, already-saved draft need not issue a new request.
+                setSelectedNote(current => current?.id === noteId ? current : notes.find(note => note.id === noteId) ?? null)
+                setDraftDiaryDate(null)
+                setCurrentView('view')
+              }}
+              onBeginAction={() => {
+                if (navigationPendingRef.current) return false
+                navigationPendingRef.current = true
+                return true
+              }}
+              onEndAction={() => { navigationPendingRef.current = false }}
               onCancel={() => { setDraftDiaryDate(null); setCurrentView(originView) }}
+              autoSave
+              onAutosaveReady={registerNewNoteAutosave}
             />
           )}
           

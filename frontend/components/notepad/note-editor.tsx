@@ -1,9 +1,10 @@
 "use client"
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { imageFilesFrom, uploadImageAsMarkdown } from '@/lib/images'
 import { readClipboard, writeClipboardText } from '@/lib/clipboard'
 import { ContextMenu, ContextMenuItem } from './context-menu'
+import { NoteAutosave, type FlushNoteDraft, type SavedNoteDraft } from '@/lib/note-autosave'
 
 interface NoteEditorProps {
   initialTitle?: string
@@ -11,9 +12,14 @@ interface NoteEditorProps {
   initialCategory?: string
   diaryDate?: string
   categories: string[]
-  onSave: (title: string, content: string, category: string) => void | Promise<void>
+  onSave: (title: string, content: string, category: string, noteId?: string | null, draftId?: string) => void | SavedNoteDraft | Promise<void | SavedNoteDraft>
   onCancel: () => void
+  onSaved?: (noteId: string) => void
+  onBeginAction?: () => boolean
+  onEndAction?: () => void
   isEditing?: boolean
+  autoSave?: boolean
+  onAutosaveReady?: (flush: FlushNoteDraft | null) => void
 }
 
 export function NoteEditor({
@@ -24,23 +30,107 @@ export function NoteEditor({
   categories,
   onSave,
   onCancel,
+  onSaved,
+  onBeginAction,
+  onEndAction,
   isEditing = false,
+  autoSave = false,
+  onAutosaveReady,
 }: NoteEditorProps) {
-  const [title, setTitle] = useState(initialTitle)
-  const [content, setContent] = useState(initialContent)
-  const [category, setCategory] = useState(initialCategory)
+  const onSaveRef = useRef(onSave)
+  onSaveRef.current = onSave
+  const [autosave] = useState(() => {
+    if (!autoSave) return null
+    let recovery
+    try {
+      recovery = { storage: window.sessionStorage, key: `smart-notes:new-note:${diaryDate ?? 'ordinary'}` }
+    } catch { /* Saving to the API still works without browser storage. */ }
+    return new NoteAutosave({ title: initialTitle, content: initialContent, category: initialCategory || '未分类' },
+      async (draft, id, draftId) => {
+        const saved = await onSaveRef.current(draft.title, draft.content, draft.category, id, draftId)
+        if (!saved?.id) throw new Error('笔记保存未完成，请重试。')
+        return saved
+      }, recovery)
+  })
+  const autosaveState = useSyncExternalStore(
+    autosave?.subscribe ?? (() => () => {}),
+    autosave?.getSnapshot ?? (() => null),
+    () => null,
+  )
+  const [title, setTitle] = useState(() => autosave?.getDraft().title ?? initialTitle)
+  const [content, setContent] = useState(() => autosave?.getDraft().content ?? initialContent)
+  const [category, setCategory] = useState(() => autosave?.getDraft().category ?? initialCategory)
   const [newCategory, setNewCategory] = useState('')
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [composing, setComposing] = useState(false)
+  const [autosaveReady, setAutosaveReady] = useState(!autosave)
   const savingRef = useRef(false)
-  const categoryOptions = Array.from(new Set([...categories, initialCategory].filter(Boolean)))
+  const autosaveFlushRef = useRef<FlushNoteDraft | null>(null)
+  const categoryOptions = Array.from(new Set([...categories, initialCategory, category].filter(Boolean)))
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const currentDraftRef = useRef({ title, content, category })
+  currentDraftRef.current = { title, content, category: showNewCategory ? newCategory.trim() || category : category }
+  const pausedRef = useRef(composing || uploading)
+  pausedRef.current = composing || uploading
   // 右键时先捕获选区，之后焦点移到菜单也不会丢失
   const selRef = useRef({ start: 0, end: 0 })
+
+  useEffect(() => {
+    if (!autosave) return
+    const recovered = autosave.restoreRecovery()
+    setTitle(recovered.title)
+    setContent(recovered.content)
+    setCategory(recovered.category)
+    setAutosaveReady(true)
+  }, [autosave])
+
+  useEffect(() => {
+    if (!autosave || !autosaveReady) return
+    autosave.setPaused(composing || uploading)
+    autosave.update({ title, content, category: showNewCategory ? newCategory.trim() || category : category })
+  }, [autosave, autosaveReady, title, content, category, showNewCategory, newCategory, composing, uploading])
+
+  useEffect(() => {
+    if (!autosave || !autosaveReady) return
+    const flush: FlushNoteDraft = async leaving => {
+      // Navigation/pagehide can happen before the input's effect runs.
+      autosave.setPaused(pausedRef.current)
+      autosave.update(currentDraftRef.current)
+      if (pausedRef.current) return false
+      const saved = await autosave.flush()
+      if (saved && leaving) autosave.forgetRecovery()
+      return saved
+    }
+    autosaveFlushRef.current = flush
+    onAutosaveReady?.(flush)
+    const save = () => { void flush() }
+    const onVisibilityChange = () => { if (document.visibilityState === 'hidden') save() }
+    const onSaveShortcut = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 's') return
+      event.preventDefault()
+      if (event.isComposing || event.repeat) return
+      save()
+    }
+    window.addEventListener('pagehide', save)
+    window.addEventListener('online', save)
+    window.addEventListener('keydown', onSaveShortcut)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    // Recover an interrupted draft without creating another note after its first save.
+    if (autosave.getSnapshot().status === 'pending') void autosave.flush()
+    return () => {
+      autosaveFlushRef.current = null
+      onAutosaveReady?.(null)
+      window.removeEventListener('pagehide', save)
+      window.removeEventListener('online', save)
+      window.removeEventListener('keydown', onSaveShortcut)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      void flush()
+    }
+  }, [autosave, autosaveReady, onAutosaveReady])
 
   // 用文本替换 [start, end) 区间，并把光标移到插入内容之后
   const replaceRange = (start: number, end: number, text: string) => {
@@ -70,6 +160,7 @@ export function NoteEditor({
 
   const uploadAndInsert = async (files: File[]) => {
     if (files.length === 0) return
+    autosave?.setPaused(true)
     setUploading(true)
     try {
       for (const file of files) {
@@ -79,6 +170,7 @@ export function NoteEditor({
     } catch (e) {
       alert(e instanceof Error ? e.message : '图片上传失败')
     } finally {
+      autosave?.setPaused(composing)
       setUploading(false)
     }
   }
@@ -123,6 +215,7 @@ export function NoteEditor({
     const { start, end } = selRef.current
     const { text, images } = await readClipboard()
     if (images.length > 0) {
+      autosave?.setPaused(true)
       setUploading(true)
       try {
         const mds: string[] = []
@@ -131,6 +224,7 @@ export function NoteEditor({
       } catch (err) {
         alert(err instanceof Error ? err.message : '图片粘贴失败')
       } finally {
+        autosave?.setPaused(composing)
         setUploading(false)
       }
     } else if (text) {
@@ -158,7 +252,7 @@ export function NoteEditor({
   ]
 
   const handleSave = async () => {
-    if (savingRef.current || uploading) return
+    if (savingRef.current || uploading || composing || (autoSave && !autosaveReady)) return
     setSaveError('')
     if (!title.trim() || !content.trim()) {
       setSaveError('标题和内容不能为空！')
@@ -169,30 +263,59 @@ export function NoteEditor({
       setSaveError('请选择或输入分类！')
       return
     }
+    if (onBeginAction && !onBeginAction()) return
     savingRef.current = true
     setSaving(true)
     setMenu(null)
     try {
-      await onSave(title.trim(), content.trim(), finalCategory)
+      if (autosave) {
+        // Manual and automatic saves share the same queue and note id.
+        if (!await autosaveFlushRef.current?.(true)) return
+        const noteId = autosave.getNoteId()
+        if (noteId) onSaved?.(noteId)
+      } else {
+        await onSave(title.trim(), content.trim(), finalCategory)
+      }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : '笔记保存失败，请稍后重试。')
     } finally {
       savingRef.current = false
       setSaving(false)
+      onEndAction?.()
+    }
+  }
+
+  const handleCancel = async () => {
+    if (!autosave) {
+      onCancel()
+      return
+    }
+    if (savingRef.current || pausedRef.current || !autosaveReady) return
+    if (onBeginAction && !onBeginAction()) return
+    savingRef.current = true
+    setSaving(true)
+    setMenu(null)
+    try {
+      // Leave the editor without discarding content already being autosaved.
+      if (await autosaveFlushRef.current?.(true)) onCancel()
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+      onEndAction?.()
     }
   }
 
   return (
-    <div className="fv-secondary fv-editor flex-1 flex flex-col overflow-hidden" aria-busy={saving}>
+    <div className="fv-secondary fv-editor flex-1 flex flex-col overflow-hidden" aria-busy={saving || autosaveState?.status === 'saving'}>
       <div className="fv-section-bar p-2 bg-[#d4d0c8] border-b border-[#808080] text-[11px] font-bold">
         {diaryDate ? (isEditing ? '编辑日记' : '写日记') : (isEditing ? '编辑笔记' : '新建笔记')}
       </div>
       
-      <fieldset disabled={saving} className="fv-workspace flex-1 min-w-0 flex flex-col p-2 gap-2 border-0 bg-[#ece9d8] overflow-auto">
+      <fieldset disabled={saving} onCompositionStartCapture={() => { autosave?.setPaused(true); setComposing(true) }} onCompositionEndCapture={() => setComposing(false)} className="fv-workspace flex-1 min-w-0 flex flex-col p-2 gap-2 border-0 bg-[#ece9d8] overflow-auto">
         {diaryDate && (
           <div className="fv-diary-banner win-inset bg-[#fff5fa] px-3 py-2 text-[11px] text-[#80405f]">
             日记日期：<time dateTime={diaryDate} className="font-bold">{diaryDate}</time>
-            <span className="ml-2 text-[10px]">保存后归入这一天</span>
+            <span className="ml-2 text-[10px]">{autoSave ? '自动保存到这一天' : '保存后归入这一天'}</span>
           </div>
         )}
         {/* 标题输入 */}
@@ -249,51 +372,30 @@ export function NoteEditor({
         </div>
         
         {/* 内容编辑 */}
-        <div className="flex-1 flex flex-col gap-1 min-h-0">
-          <div className="flex items-center gap-2">
-            <label className="fv-field-label text-[11px]">内容：</label>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={saving || uploading}
-              className="win-button text-[11px] px-2"
-            >
-              📷 插入图片
-            </button>
-            <span className="fv-muted text-[10px] text-[#606060]">
-              {uploading ? '图片上传中…' : '可直接粘贴或拖入图片'}
-            </span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                void uploadAndInsert(Array.from(e.target.files ?? []))
-                e.target.value = ''
-              }}
-            />
-          </div>
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onPaste={handlePaste}
-            onDrop={handleDrop}
-            onContextMenu={openMenu}
-            className="fv-editor-paper flex-1 p-2 text-[12px] win-input resize-none font-mono leading-relaxed min-h-[300px]"
-            placeholder="输入笔记内容...（右键可选中/复制/粘贴；图片可直接粘贴或拖入）"
-          />
-        </div>
+        <textarea
+          ref={textareaRef}
+          aria-label="内容"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onPaste={handlePaste}
+          onDrop={handleDrop}
+          onContextMenu={openMenu}
+          className="fv-editor-paper flex-1 min-w-0 p-2 text-[12px] win-input resize-none font-mono leading-relaxed min-h-[300px]"
+          placeholder="输入笔记内容...（右键可选中/复制/粘贴）"
+        />
         
         {saveError && <p role="alert" className="fv-error text-[11px] text-[#a00000]">{saveError}</p>}
-        {/* 操作按钮 */}
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onCancel} className="win-button text-[11px] px-4 py-1">
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-[11px]">
+          {autoSave && <span role={autosaveState?.status === 'error' ? 'alert' : 'status'} className={`mr-auto ${autosaveState?.status === 'error' ? 'fv-error text-[#a00000]' : 'fv-muted text-[#606060]'}`}>
+            {uploading ? '图片上传中…' : autosaveState?.status === 'saved' ? '已保存' :
+              autosaveState?.status === 'saving' ? '保存中…' : autosaveState?.status === 'pending' ? '等待保存…' :
+              autosaveState?.status === 'error' ? autosaveState.error : '输入后自动保存'}
+          </span>}
+          {autosaveState?.status === 'error' && <button type="button" className="win-button text-[11px] px-2" onClick={() => { void autosaveFlushRef.current?.() }}>重试保存</button>}
+          <button type="button" onClick={() => { void handleCancel() }} disabled={saving || (autoSave && (uploading || composing || !autosaveReady))} className="win-button shrink-0 text-[11px] px-4 py-1">
             取消
           </button>
-          <button onClick={() => { void handleSave() }} disabled={saving || uploading} className="fv-primary-action win-button text-[11px] px-4 py-1">
+          <button type="button" onClick={() => { void handleSave() }} disabled={saving || uploading || composing || (autoSave && !autosaveReady)} className="fv-primary-action win-button shrink-0 text-[11px] px-4 py-1">
             {saving ? '保存中…' : '保存'}
           </button>
         </div>
