@@ -4,8 +4,6 @@
 
 [Website & downloads](https://ziyu1617.github.io/pf-notes/)
 
-[更新记录与待发布安装包改动](CHANGELOG.md)
-
 A local-first notebook for notes, journals, and daily plans, with a calendar-first view and optional AI conversations.
 
 Built with **Next.js, FastAPI, SQLite, and pywebview**. The interface is in Simplified Chinese; the desktop app has been tested on macOS.
