@@ -39,6 +39,7 @@ export function NotepadApp() {
   const [calendarDate, setCalendarDate] = useState<string | undefined>()
   const [draftDiaryDate, setDraftDiaryDate] = useState<string | null>(null)
   const [noteOrigin, setNoteOrigin] = useState<'list' | 'calendar' | 'directory'>('list')
+  const [calendarDirectoryCategory, setCalendarDirectoryCategory] = useState<string | null>(null)
   
   const windowRef = useRef<HTMLDivElement>(null)
   const newNoteFlushRef = useRef<FlushNoteDraft | null>(null)
@@ -76,6 +77,7 @@ export function NotepadApp() {
       try {
         if (newNoteFlushRef.current && !await newNoteFlushRef.current(true)) return
         if (action === 'new') setNewNoteSession(session => session + 1)
+        if (action === 'list') setCalendarDirectoryCategory(null)
         setDraftDiaryDate(null)
         setNoteOrigin('list')
         setCurrentView(viewMap[action])
@@ -138,6 +140,7 @@ export function NotepadApp() {
 
   const handleOpenCalendarNote = (note: Note) => {
     setCalendarDate(getNoteDate(note))
+    setCalendarDirectoryCategory(note.category)
     handleSelectDirectoryNote(note)
   }
 
@@ -275,6 +278,7 @@ export function NotepadApp() {
               categories={categories}
               selectedNote={directoryNote}
               onSelectNote={handleSelectDirectoryNote}
+              initiallyExpandedCategory={calendarDirectoryCategory}
               selectionDisabled={currentView !== 'list'}
             >
               {currentView === 'edit' ? editView : currentView === 'delete' ? deleteView : directoryNote && (

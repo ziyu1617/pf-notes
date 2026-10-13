@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { compareNotesByDateDescending, type Note } from '@/hooks/use-notes'
 
 interface DirectoryViewProps {
@@ -8,6 +9,7 @@ interface DirectoryViewProps {
   categories: string[]
   selectedNote: Note | null
   onSelectNote: (note: Note) => void
+  initiallyExpandedCategory?: string | null
   selectionDisabled?: boolean
   children: ReactNode
 }
@@ -17,14 +19,34 @@ export function DirectoryView({
   categories, 
   selectedNote,
   onSelectNote,
+  initiallyExpandedCategory = null,
   selectionDisabled = false,
   children,
 }: DirectoryViewProps) {
   const selectedNoteRef = useRef<HTMLButtonElement>(null)
+  const directoryId = useId()
+  const categoryKey = categories.join('\u0000')
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() =>
+    new Set(initiallyExpandedCategory ? [initiallyExpandedCategory] : categories)
+  )
+
+  useEffect(() => {
+    const availableCategories = categoryKey ? categoryKey.split('\u0000') : []
+    setExpandedCategories(new Set(initiallyExpandedCategory ? [initiallyExpandedCategory] : availableCategories))
+  }, [initiallyExpandedCategory, categoryKey])
 
   useEffect(() => {
     selectedNoteRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
-  }, [selectedNote?.id, selectedNote?.category])
+  }, [selectedNote?.id, selectedNote?.category, expandedCategories])
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(current => {
+      const next = new Set(current)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      return next
+    })
+  }
 
   return (
     <div className="fv-secondary fv-directory min-h-0 flex-1 flex overflow-hidden">
@@ -34,28 +56,44 @@ export function DirectoryView({
           📁 分类目录
         </div>
         <div className="p-1">
-          {categories.map(category => (
-            <div key={category} className="mb-2">
-              <div className="fv-directory-category text-[11px] font-bold px-2 py-1 bg-[#d4d0c8]">
-                📂 {category}
+          {categories.map((category, index) => {
+            const isExpanded = expandedCategories.has(category)
+            const groupId = `${directoryId}-category-${index}`
+            return (
+              <div key={category} className="mb-2">
+                <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={groupId}
+                  onClick={() => toggleCategory(category)}
+                  className="fv-directory-category flex w-full items-center gap-1 bg-[#d4d0c8] px-2 py-1 text-left text-[11px] font-bold"
+                >
+                  <span aria-hidden="true">{isExpanded ? '📂' : '📁'}</span>
+                  <span className="min-w-0 flex-1 truncate">{category}</span>
+                  <span aria-hidden="true" className="fv-directory-chevron flex h-5 w-5 shrink-0 items-center justify-center">
+                    {isExpanded ? <ChevronUp size={14} strokeWidth={2.4} /> : <ChevronDown size={14} strokeWidth={2.4} />}
+                  </span>
+                </button>
+                {isExpanded && (
+                  <div id={groupId} className="pl-2">
+                    {notesByCategory(category).slice().sort(compareNotesByDateDescending).map(note => (
+                      <button
+                        key={note.id}
+                        ref={selectedNote?.id === note.id ? selectedNoteRef : undefined}
+                        onClick={() => onSelectNote(note)}
+                        aria-current={selectedNote?.id === note.id ? 'page' : undefined}
+                        disabled={selectionDisabled}
+                        title={note.title}
+                        className={`fv-directory-link w-full text-left text-[11px] px-2 py-0.5 hover:bg-[#000080] hover:text-white truncate disabled:cursor-default ${selectedNote?.id === note.id ? 'bg-[#000080] text-white' : ''}`}
+                      >
+                        📄 {note.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="pl-2">
-                {notesByCategory(category).slice().sort(compareNotesByDateDescending).map(note => (
-                  <button
-                    key={note.id}
-                    ref={selectedNote?.id === note.id ? selectedNoteRef : undefined}
-                    onClick={() => onSelectNote(note)}
-                    aria-current={selectedNote?.id === note.id ? 'page' : undefined}
-                    disabled={selectionDisabled}
-                    title={note.title}
-                    className={`fv-directory-link w-full text-left text-[11px] px-2 py-0.5 hover:bg-[#000080] hover:text-white truncate disabled:cursor-default ${selectedNote?.id === note.id ? 'bg-[#000080] text-white' : ''}`}
-                  >
-                    📄 {note.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </nav>
       
